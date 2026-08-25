@@ -5,10 +5,11 @@ Migración del panel personal (antes un solo HTML con JS embebido) a Next.js
 
 ## Estado
 
-Fase 2 (scaffolding) completa: proyecto Next.js + TypeScript + Tailwind,
-autenticación de un solo usuario contra Supabase, endpoint de servidor para
-Claude, y el esquema completo de base de datos en
-`supabase/migrations/0001_init.sql`.
+Fase 2 (scaffolding) y Fase 3 (datos) completas: proyecto Next.js +
+TypeScript + Tailwind, autenticación de un solo usuario contra Supabase,
+endpoint de servidor para Claude, el esquema completo de base de datos
+(`supabase/migrations/0001_init.sql`), y el seed con los datos reales
+(`supabase/seed.sql`).
 
 Las pestañas todavía no están migradas — eso es la Fase 4, una por una.
 
@@ -21,7 +22,8 @@ Las pestañas todavía no están migradas — eso es la Fase 4, una por una.
    - **Project URL** → va en `NEXT_PUBLIC_SUPABASE_URL`
    - **anon public key** → va en `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - **service_role key** (sección "secret") → va en `SUPABASE_SERVICE_ROLE_KEY`
-     (solo se usa en el script de seed de la Fase 3, nunca en el server de la app)
+     (no la usa el código de la app hoy; se guarda para eventuales scripts
+     de administración futuros — nunca se expone al navegador)
 4. Ve a **SQL Editor** → **New query**, pega el contenido completo de
    `supabase/migrations/0001_init.sql` y ejecútalo. Esto crea las 19 tablas,
    siembra las clases de patrimonio, y activa Row Level Security.
@@ -32,6 +34,12 @@ Las pestañas todavía no están migradas — eso es la Fase 4, una por una.
    "Auto Confirm User" para no depender de un correo de confirmación.
    Esta app **no tiene pantalla de registro pública** a propósito — al ser
    de un solo usuario, la cuenta se crea directamente desde el dashboard.
+7. Ve a **SQL Editor** → **New query** de nuevo, pega el contenido completo
+   de `supabase/seed.sql` y ejecútalo. Esto carga tus datos reales (perfil,
+   peso, exámenes, patrimonio, cartera Futalemu) en las tablas — busca al
+   usuario que creaste en el paso anterior por su email, así que debe
+   ejecutarse después del paso 6. Es seguro volver a correrlo si necesitas
+   actualizar algo: borra e inserta de nuevo.
 
 ## 2. Variables de entorno
 
@@ -76,7 +84,7 @@ que creaste en el paso 1.6.
 
 - **Frontend + backend**: Next.js App Router, todo en `src/app`.
 - **Auth**: Supabase Auth (email + contraseña), sesión manejada por cookies
-  vía `@supabase/ssr`. `src/middleware.ts` protege todas las rutas excepto
+  vía `@supabase/ssr`. `src/proxy.ts` protege todas las rutas excepto
   `/login`.
 - **Base de datos**: Postgres en Supabase, con Row Level Security en todas
   las tablas (`auth.uid() = user_id`).
