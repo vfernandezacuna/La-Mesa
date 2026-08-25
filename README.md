@@ -5,13 +5,11 @@ Migración del panel personal (antes un solo HTML con JS embebido) a Next.js
 
 ## Estado
 
-Fase 2 (scaffolding) y Fase 3 (datos) completas: proyecto Next.js +
-TypeScript + Tailwind, autenticación de un solo usuario contra Supabase,
-endpoint de servidor para Claude, el esquema completo de base de datos
-(`supabase/migrations/0001_init.sql`), y el seed con los datos reales
-(`supabase/seed.sql`).
-
-Las pestañas todavía no están migradas — eso es la Fase 4, una por una.
+Fase 2 (scaffolding) y Fase 3 (datos) completas. Fase 4 en curso: la
+pestaña **Hoy** ya está migrada (captura con IA, foco de la semana, tu
+semana, tareas por Personal/Trabajo, hábitos, coach del día, reflexión
+diaria). Las otras 7 pestañas muestran "Próximamente" hasta que les toque
+su turno.
 
 ## 1. Crear el proyecto en Supabase
 
@@ -26,7 +24,10 @@ Las pestañas todavía no están migradas — eso es la Fase 4, una por una.
      de administración futuros — nunca se expone al navegador)
 4. Ve a **SQL Editor** → **New query**, pega el contenido completo de
    `supabase/migrations/0001_init.sql` y ejecútalo. Esto crea las 19 tablas,
-   siembra las clases de patrimonio, y activa Row Level Security.
+   siembra las clases de patrimonio, y activa Row Level Security. Repite el
+   mismo paso con `supabase/migrations/0002_user_id_defaults.sql` (hace que
+   cada tabla rellene `user_id` sola con el usuario logueado, para que el
+   código de la app no tenga que mandarlo a mano en cada inserción).
 5. Ve a **Authentication → Providers** y confirma que **Email** esté
    habilitado (viene habilitado por defecto).
 6. Ve a **Authentication → Users** → **Add user** → **Create new user**, y
@@ -79,6 +80,27 @@ que creaste en el paso 1.6.
    `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`).
 4. Deploy.
+
+## Probar la pestaña Hoy
+
+Con las migraciones y el seed corridos, entra al panel y revisa:
+
+- El saludo, la fecha y el reloj cambian según tu hora local; la reflexión
+  del día tiene un botón "Ver otra".
+- Escribe algo como "reunión con el banco mañana a las 10" en el campo de
+  captura (o dicta con el micrófono) y confirma que aparece como tarea con
+  fecha, hora y categoría correctas — y que "Tu coach, hoy" responde algo
+  relacionado con tu día.
+- Marca una tarea como hecha (se tacha) y bórrala (aparece una ✕ al pasar
+  el mouse).
+- En "Hábitos innegociables": marca un hábito diario (debe sumar racha al
+  día siguiente si sigues marcándolo) y agrega una sesión de deporte de
+  esta semana (debe sumar en los puntos de la meta semanal).
+- "El foco de la semana" debe mostrar 3 casilleros vacíos que invitan a
+  fijarlos en la Revisión semanal (esa pestaña todavía es "Próximamente" —
+  es normal, le toca más adelante).
+- Recarga la página: todo lo anterior debe seguir ahí (ya no vive en el
+  navegador, vive en Supabase).
 
 ## Arquitectura
 
