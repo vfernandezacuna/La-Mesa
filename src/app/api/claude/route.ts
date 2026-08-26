@@ -63,7 +63,12 @@ export async function POST(request: Request) {
           ? err.message
           : String(err);
     return NextResponse.json(
-      { error: "Error al llamar a Claude", detail },
+      {
+        error: "Error al llamar a Claude",
+        detail,
+        envKeyPresent: !!process.env.ANTHROPIC_API_KEY,
+        envKeyLength: process.env.ANTHROPIC_API_KEY?.length ?? 0,
+      },
       { status: 502 },
     );
   }

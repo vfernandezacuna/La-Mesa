@@ -14,7 +14,15 @@ export async function askClaude(system: string, user: string, maxTokens = 1200):
     }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail ? `${data.error}: ${data.detail}` : data.error || "Error al llamar a Claude");
+  if (!res.ok) {
+    const envInfo =
+      data.envKeyPresent !== undefined
+        ? ` (envKeyPresent=${data.envKeyPresent}, envKeyLength=${data.envKeyLength})`
+        : "";
+    throw new Error(
+      (data.detail ? `${data.error}: ${data.detail}` : data.error || "Error al llamar a Claude") + envInfo,
+    );
+  }
   const blocks: ClaudeContentBlock[] = data.content ?? [];
   return blocks
     .filter((b) => b.type === "text")
