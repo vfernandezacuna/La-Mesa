@@ -27,7 +27,10 @@ su turno.
    siembra las clases de patrimonio, y activa Row Level Security. Repite el
    mismo paso con `supabase/migrations/0002_user_id_defaults.sql` (hace que
    cada tabla rellene `user_id` sola con el usuario logueado, para que el
-   código de la app no tenga que mandarlo a mano en cada inserción).
+   código de la app no tenga que mandarlo a mano en cada inserción) y con
+   `supabase/migrations/0003_grants.sql` (sin esto, el rol `authenticated`
+   no tiene permiso ni para leer las tablas, aunque RLS esté bien
+   configurado — da error "permission denied for table ...").
 5. Ve a **Authentication → Providers** y confirma que **Email** esté
    habilitado (viene habilitado por defecto).
 6. Ve a **Authentication → Users** → **Add user** → **Create new user**, y
