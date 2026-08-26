@@ -13,8 +13,8 @@ export async function askClaude(system: string, user: string, maxTokens = 1200):
       maxTokens,
     }),
   });
-  if (!res.ok) throw new Error("Error al llamar a Claude");
   const data = await res.json();
+  if (!res.ok) throw new Error(data.detail ? `${data.error}: ${data.detail}` : data.error || "Error al llamar a Claude");
   const blocks: ClaudeContentBlock[] = data.content ?? [];
   return blocks
     .filter((b) => b.type === "text")

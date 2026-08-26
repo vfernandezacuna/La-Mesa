@@ -53,8 +53,17 @@ export async function POST(request: Request) {
     return NextResponse.json(response);
   } catch (err) {
     console.error("Error llamando a Claude:", err);
+    // Diagnóstico temporal: incluye el detalle real del error en la
+    // respuesta para poder verlo desde el navegador sin depender de los
+    // logs de Vercel. Se retira una vez resuelto.
+    const detail =
+      err instanceof Anthropic.APIError
+        ? `[${err.status}] ${err.message}`
+        : err instanceof Error
+          ? err.message
+          : String(err);
     return NextResponse.json(
-      { error: "Error al llamar a Claude" },
+      { error: "Error al llamar a Claude", detail },
       { status: 502 },
     );
   }
