@@ -260,6 +260,27 @@ button.ghost:hover{background:var(--accent-tint);border-color:var(--accent-deep)
 .dep-btn{background:transparent;border:1px solid var(--hairline-strong);color:var(--ink);font-size:0.78rem;padding:6px 12px;border-radius:8px;cursor:pointer;transition:.12s;font-family:var(--font-body);}
 .dep-btn:hover{background:var(--mag);border-color:var(--mag);color:#fff;}
 
+/* Revisión: scores e historial */
+.score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:6px;}
+.score-card{padding:4px 0;}
+.score-card .sc-val{font-family:var(--font-heading);font-size:2.6rem;font-weight:600;line-height:1;}
+.score-card .sc-lbl{font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--n700);margin-top:8px;}
+.score-card.good .sc-val{color:var(--accent-deep);}
+.score-card.pend .sc-val{color:var(--n600);}
+.score-card.late .sc-val{color:var(--amarillo-deep);}
+.stale{color:var(--amarillo-deep);}
+.wp-add{font-size:0.68rem;color:var(--mag-deep);cursor:pointer;border:1px solid var(--hairline);border-radius:8px;padding:2px 8px;flex-shrink:0;white-space:nowrap;}
+.wp-add:hover{border-color:var(--mag-deep);}
+.review-done{border-left:2px solid var(--mag);padding:12px 0 12px 16px;font-size:0.95rem;margin-top:16px;color:var(--ink);}
+.rv-entry{border-left:2px solid var(--hairline-strong);padding:10px 0 12px 16px;margin-bottom:14px;}
+.rv-entry-head{font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-deep);font-weight:600;margin-bottom:6px;}
+.rv-entry-note{font-size:0.95rem;line-height:1.55;}
+.rv-chips{margin-top:9px;display:flex;gap:12px;flex-wrap:wrap;}
+.rv-chip{font-size:0.68rem;font-family:var(--mono);color:var(--n700);}
+.rv-chip.good{color:var(--accent-deep);}
+.rv-chip.pend{color:var(--n600);}
+.rv-chip.late{color:var(--amarillo-deep);}
+
 /* Reflexión del día — pull quote */
 .daily-quote{padding:2px 0 2px 16px;margin:0;position:relative;width:280px;flex-shrink:0;border-left:2px solid var(--mag);}
 .daily-quote .dq-head{display:flex;align-items:baseline;gap:10px;margin-bottom:7px;flex-wrap:wrap;}

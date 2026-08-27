@@ -43,3 +43,19 @@ export interface HabitLog {
 export interface WeeklyReviewSummary {
   week_key: string;
 }
+
+export interface WeeklyReview {
+  id: string;
+  user_id: string;
+  week_key: string;
+  rango: string | null;
+  review_date: string | null;
+  note: string | null;
+  done_count: number | null;
+  pend_count: number | null;
+  late_count: number | null;
+  coach_conclusion: string | null;
+  coach_semana: string | null;
+  coach_accion: string | null;
+  created_at: string;
+}

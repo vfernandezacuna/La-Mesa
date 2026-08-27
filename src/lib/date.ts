@@ -27,6 +27,15 @@ export function daysUntil(dateStr: string | null): number | null {
   );
 }
 
+export function inThisWeek(dateStr: string | null, now: Date): boolean {
+  if (!dateStr) return false;
+  const mon = mondayOf(now);
+  const sun = new Date(mon);
+  sun.setDate(sun.getDate() + 6);
+  const f = new Date(dateStr + "T00:00:00");
+  return f >= mon && f <= sun;
+}
+
 export function weekRangeLabel(now: Date): string {
   const mon = mondayOf(now);
   const sun = new Date(mon);

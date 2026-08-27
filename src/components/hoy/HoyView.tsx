@@ -29,6 +29,13 @@ interface SpeechRecognitionLike {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+interface LastInsight {
+  review_date: string | null;
+  coach_conclusion: string | null;
+  coach_semana: string | null;
+  coach_accion: string | null;
+}
+
 export default function HoyView({
   initialTasks,
   habits,
@@ -36,6 +43,7 @@ export default function HoyView({
   profile,
   recentWeekKeys,
   prefillDate,
+  lastInsight,
 }: {
   initialTasks: Task[];
   habits: Habit[];
@@ -43,6 +51,7 @@ export default function HoyView({
   profile: string;
   recentWeekKeys: string[];
   prefillDate?: string;
+  lastInsight: LastInsight | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -284,6 +293,19 @@ export default function HoyView({
   const alreadyDoneThisWeek = weekTasks.length > 0 || recentWeekKeys.includes(weekKey);
   const showWeeklyBanner = isSunday && !alreadyDoneThisWeek;
 
+  const dow = now.getDay(); // 1 = lunes
+  const diasDesdeInsight = lastInsight?.review_date
+    ? Math.round(
+        (new Date(today + "T00:00:00").getTime() - new Date(lastInsight.review_date + "T00:00:00").getTime()) /
+          86400000,
+      )
+    : null;
+  const showMondayInsight =
+    !!lastInsight?.coach_conclusion &&
+    (dow === 1 || dow === 2) &&
+    diasDesdeInsight !== null &&
+    diasDesdeInsight <= 4;
+
   const quoteIdx = (dayOfYear(now) + quoteOffset) % reflectionsMixed.length;
   const quote = reflectionsMixed[quoteIdx];
 
@@ -360,6 +382,21 @@ export default function HoyView({
           </div>
           <span className="wb-go">→</span>
         </Link>
+      )}
+
+      {showMondayInsight && lastInsight && (
+        <div className="close-insight" style={{ marginTop: 0, marginBottom: 22 }}>
+          <div className="ci-lbl">Tu coach, sobre la semana que cerraste</div>
+          <div className="ci-body">{lastInsight.coach_semana || lastInsight.coach_conclusion}</div>
+          {lastInsight.coach_accion && (
+            <div className="ci-action">
+              <div className="ci-action-lbl">Tu acción para esta semana</div>
+              <div className="ci-body" style={{ fontWeight: 600 }}>
+                {lastInsight.coach_accion}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="section">
