@@ -25,7 +25,7 @@ export default function WeekStrip({ tasks, now }: { tasks: Task[]; now: Date }) 
           return (
             <Link
               key={ds}
-              href="/calendario"
+              href={`/calendario?date=${ds}`}
               className={`wk-day ${isToday ? "today" : ""} ${isPast ? "past" : ""}`}
               title={`${dayTasks.length} pendiente${dayTasks.length === 1 ? "" : "s"}`}
             >

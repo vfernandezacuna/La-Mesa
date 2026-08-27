@@ -2,7 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import HoyView from "@/components/hoy/HoyView";
 import type { Habit, HabitLog, Task } from "@/lib/types";
 
-export default async function HoyPage() {
+export default async function HoyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ prefillDate?: string }>;
+}) {
+  const { prefillDate } = await searchParams;
   const supabase = await createClient();
 
   const [tasksRes, habitsRes, habitLogsRes, profileRes, reviewsRes] = await Promise.all([
@@ -20,6 +25,7 @@ export default async function HoyPage() {
       initialHabitLogs={(habitLogsRes.data as HabitLog[]) ?? []}
       profile={profileRes.data?.content ?? ""}
       recentWeekKeys={(reviewsRes.data ?? []).map((r) => r.week_key)}
+      prefillDate={prefillDate}
     />
   );
 }

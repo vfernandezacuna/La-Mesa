@@ -35,12 +35,14 @@ export default function HoyView({
   initialHabitLogs,
   profile,
   recentWeekKeys,
+  prefillDate,
 }: {
   initialTasks: Task[];
   habits: Habit[];
   initialHabitLogs: HabitLog[];
   profile: string;
   recentWeekKeys: string[];
+  prefillDate?: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -56,6 +58,7 @@ export default function HoyView({
   const [capturing, setCapturing] = useState(false);
   const [recording, setRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const captureInputRef = useRef<HTMLInputElement>(null);
 
   const [quoteOffset, setQuoteOffset] = useState(0);
   const [coachText, setCoachText] = useState<string | null>(null);
@@ -76,6 +79,25 @@ export default function HoyView({
     // Solo al montar: es un saludo de una vez, no debe re-disparar en cada cambio de tarea.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
+
+  useEffect(() => {
+    const applyPrefill = () => {
+      if (!mounted || !prefillDate) return;
+      const label = new Date(prefillDate + "T00:00:00").toLocaleDateString("es-CL", {
+        day: "numeric",
+        month: "long",
+      });
+      setCaptureValue(`... el ${label}`);
+      setCaptureStatus(`Escribe la tarea reemplazando los puntos — le pondré fecha ${label}.`);
+      const input = captureInputRef.current;
+      if (input) {
+        input.focus();
+        input.setSelectionRange(0, 3);
+      }
+    };
+    applyPrefill();
+    // Solo al llegar desde Calendario con una fecha prellenada.
+  }, [mounted, prefillDate]);
 
   async function loadCoach() {
     const active = tasks.filter((t) => !t.done);
@@ -292,6 +314,7 @@ export default function HoyView({
           </div>
           <div className="capture-mini">
             <input
+              ref={captureInputRef}
               type="text"
               placeholder="Anota o dicta una tarea…"
               value={captureValue}
