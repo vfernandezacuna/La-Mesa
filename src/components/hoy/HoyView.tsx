@@ -89,11 +89,9 @@ export default function HoyView({
     try {
       const txt = await askClaude(coachStripSystemPrompt(), user, 300);
       setCoachText(txt.trim());
-    } catch (err) {
-      // Diagnóstico temporal: muestra el error real en vez del mensaje de
-      // respaldo, para encontrar la causa sin depender de los logs de Vercel.
+    } catch {
       setCoachText(
-        `[debug] ${err instanceof Error ? err.message : String(err)}`,
+        "Tu mentor no está disponible ahora mismo. Igual: empieza por lo que de verdad importa, no por lo que grita más fuerte.",
       );
     }
   }
