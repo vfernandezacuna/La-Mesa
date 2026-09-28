@@ -485,6 +485,80 @@ table.data td{padding:10px 10px 10px 0;border-bottom:1px solid var(--hairline);f
 .pat-table tr:hover .pt-del{opacity:1;}
 .pt-del:hover{color:var(--mag-deep);}
 
+/* Patrimonio — resumen, ecuación patrimonial y ratios */
+.pat-hero{border:1px solid var(--hairline);border-top:3px solid var(--accent-deep);border-radius:8px;padding:28px 30px;background:var(--surface);margin:24px 0 32px;box-shadow:var(--shadow-md);}
+.ph-lbl{font-size:0.75rem;text-transform:uppercase;letter-spacing:1.4px;color:var(--n700);font-weight:600;margin-bottom:10px;}
+.ph-val{font-family:var(--font-heading);font-size:3.2rem;font-weight:600;line-height:1.1;color:var(--accent-deep);letter-spacing:-.02em;}
+.ph-delta{font-family:var(--mono);font-size:0.9rem;margin-top:10px;}
+.ph-delta.up{color:var(--accent-deep);}
+.ph-delta.down{color:var(--mag-deep);}
+.ph-eq{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--hairline);}
+.eq-item{display:flex;flex-direction:column;gap:3px;}
+.eq-l{font-size:0.62rem;text-transform:uppercase;letter-spacing:1.1px;color:var(--n600);font-weight:600;}
+.eq-v{font-family:var(--mono);font-size:1.02rem;font-weight:600;color:var(--ink);}
+.eq-item.pas .eq-v{color:var(--mag-deep);}
+.eq-item.net .eq-v{font-weight:700;}
+.eq-op{font-family:var(--mono);font-size:1.1rem;color:var(--n500);padding-bottom:2px;}
+.ph-ratios{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px;font-size:0.76rem;color:var(--n700);}
+.ph-ratios b{font-family:var(--mono);color:var(--ink);font-weight:600;margin-left:3px;}
+.pat-equiv{text-align:right;font-size:0.76rem;color:var(--n600);margin:-14px 0 20px;font-family:var(--mono);}
+.pat-equiv-fecha{color:var(--n500);}
+
+/* Patrimonio — trayectoria (barras) */
+.pat-bars{display:flex;align-items:flex-end;gap:7px;height:215px;padding-top:8px;}
+.pat-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+.pat-bar-val{font-family:var(--mono);font-size:0.62rem;color:var(--n600);margin-bottom:4px;}
+.pat-bar{width:100%;max-width:46px;background:var(--mag-tint);border:1px solid var(--mag);border-bottom:none;border-radius:2px 2px 0 0;}
+.pat-bar.last{background:var(--mag);}
+.pat-bar-lbl{font-family:var(--mono);font-size:0.6rem;color:var(--n600);margin-top:7px;text-align:center;white-space:nowrap;}
+.pat-bar-lbl .pb-y{color:var(--n500);}
+.pat-chart-note{font-size:0.7rem;color:var(--n500);margin-top:12px;text-align:right;}
+.pat-hist{margin-top:6px;}
+.pat-hist summary{font-size:0.78rem;color:var(--n600);cursor:pointer;padding:8px 0;}
+.pat-hist summary:hover{color:var(--mag-deep);}
+
+/* Patrimonio — composición (activos/pasivos) */
+.mix-block{margin-bottom:26px;}
+.mix-block:last-child{margin-bottom:0;}
+.mix-head{font-size:0.68rem;text-transform:uppercase;letter-spacing:1.4px;font-weight:700;padding-bottom:8px;margin-bottom:14px;border-bottom:1px solid var(--hairline-strong);display:flex;justify-content:space-between;align-items:baseline;}
+.mix-head.act{color:var(--accent-deep);}
+.mix-head.pas{color:var(--mag-deep);}
+.mix-head .mh-tot{font-family:var(--mono);font-size:0.86rem;letter-spacing:0;text-transform:none;}
+.mix-row{margin-bottom:13px;}
+.mix-top{display:flex;justify-content:space-between;font-size:0.86rem;margin-bottom:5px;gap:12px;}
+.mix-pct{font-family:var(--mono);font-size:0.76rem;color:var(--n600);white-space:nowrap;}
+.mix-track{height:7px;background:var(--surface);border-radius:8px;overflow:hidden;}
+.mix-fill{height:100%;border-radius:8px;}
+.mix-fill.act{background:var(--accent-deep);}
+.mix-fill.pas{background:var(--mag);}
+.mix-note{font-size:0.7rem;color:var(--n500);margin-top:10px;font-style:italic;}
+.mix-sub{margin:6px 0 12px 14px;padding-left:12px;border-left:1px solid var(--hairline);}
+.mix-sub-row{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--n700);padding:3px 0;gap:12px;}
+.mix-sub-row .msr-v{font-family:var(--mono);font-size:0.74rem;color:var(--n600);white-space:nowrap;}
+
+/* Patrimonio — formulario manual de trimestre */
+.pat-manual{margin-bottom:26px;}
+.pat-manual summary{font-size:0.8rem;color:var(--n600);cursor:pointer;padding:8px 0;}
+.pat-manual summary:hover{color:var(--mag-deep);}
+.mini-lbl{display:block;font-size:0.64rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--n600);font-weight:600;margin-bottom:5px;}
+.pat-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:20px;}
+.pat-col-lbl{font-size:0.66rem;text-transform:uppercase;letter-spacing:1.4px;font-weight:700;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--hairline);}
+.pat-col-lbl.activos{color:var(--accent-deep);}
+.pat-col-lbl.deudas{color:var(--mag-deep);}
+.pat-field{margin-bottom:20px;}
+.pat-field label{display:block;font-size:0.85rem;color:var(--n700);margin-bottom:6px;}
+.pat-field .pf-sub{display:block;font-size:0.64rem;color:var(--n500);font-weight:400;}
+
+@media(max-width:720px){
+  .pat-grid{grid-template-columns:1fr;gap:18px;}
+  .ph-val{font-size:2.2rem;}
+  .pat-bars{gap:4px;height:180px;}
+  .pat-bar-val{display:none;}
+  .pat-bar-lbl{font-size:0.52rem;}
+  .ph-eq{gap:10px;}
+  .pat-table td,.pat-table th{padding:6px 5px;font-size:0.7rem;}
+}
+
 /* Tabla de exámenes */
 .exam-wrap{overflow-x:auto;}
 .exam-table{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:420px;}

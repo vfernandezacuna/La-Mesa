@@ -24,6 +24,30 @@ export async function askClaude(system: string, user: string, maxTokens = 1200):
     .join("\n");
 }
 
+// Variante con búsqueda web — usada para indicadores del día (UF/dólar) y
+// para los briefings de mercado que necesitan datos actuales.
+export async function askClaudeWeb(system: string, user: string, maxTokens = 2000): Promise<string> {
+  const res = await fetch("/api/claude", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system,
+      messages: [{ role: "user", content: user }],
+      maxTokens,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail ? `${data.error}: ${data.detail}` : data.error || "Error al llamar a Claude");
+  }
+  const blocks: ClaudeContentBlock[] = data.content ?? [];
+  return blocks
+    .filter((b) => b.type === "text")
+    .map((b) => b.text ?? "")
+    .join("\n");
+}
+
 // Variante para adjuntar un PDF en base64 (sin prefijo data:) — usada por la
 // extracción de índices de exámenes.
 export async function askClaudeWithPdf(

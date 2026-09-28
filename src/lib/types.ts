@@ -124,7 +124,8 @@ export type PatrimonioClassCode =
   | "inmueble"
   | "retiro"
   | "mueble"
-  | "nocorrientes_p";
+  | "nocorrientes_p"
+  | "corrientes_p";
 
 export interface PatrimonioQuarter {
   id: string;
@@ -138,6 +139,22 @@ export interface PatrimonioClassTotal {
   quarter_id: string;
   class_code: PatrimonioClassCode;
   amount: number;
+}
+
+export interface PatrimonioLineItem {
+  id: string;
+  quarter_id: string;
+  class_code: PatrimonioClassCode;
+  label: string;
+  amount: number;
+}
+
+export interface MarketIndicatorsCache {
+  user_id: string;
+  as_of: string;
+  uf: number;
+  dolar: number;
+  fetched_at: string;
 }
 
 export interface InvestmentsFutalemu {

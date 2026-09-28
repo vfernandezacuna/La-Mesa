@@ -190,11 +190,11 @@ export function buildPatrimonioContext(quarters: PatrimonioQuarterTotals[]): str
 }
 
 export interface AdvisorContextData {
-  checkins: Checkin[];
-  habits: Habit[];
-  habitLogs: HabitLog[];
-  weightLog: WeightLog[];
-  examResults: ExamResult[];
+  checkins?: Checkin[];
+  habits?: Habit[];
+  habitLogs?: HabitLog[];
+  weightLog?: WeightLog[];
+  examResults?: ExamResult[];
   weeklyReviews: WeeklyReview[];
   decisiones?: { dilema: string }[];
   learningTopics?: string[];
@@ -202,21 +202,37 @@ export interface AdvisorContextData {
   patrimonioQuarters?: PatrimonioQuarterTotals[];
 }
 
-// Expediente compartido por Coach y El Consejo: hábitos con racha, peso con
-// tendencia y comparación anual, evolución de exámenes, cierres semanales,
-// y — solo para El Consejo — cartera, patrimonio, decisiones y aprendizaje.
-// Se combina con buildTaskContext(tasks) para el expediente completo.
-export function buildAdvisorContext(scope: "coach" | "consejo", data: AdvisorContextData): string {
+// Expediente compartido por Coach, El Consejo y el CIO (Patrimonio/Inversiones):
+// hábitos con racha, peso con tendencia y comparación anual, evolución de
+// exámenes, cierres semanales — y, para Consejo/CIO, cartera y patrimonio;
+// solo para Consejo, decisiones y aprendizaje. Se combina con
+// buildTaskContext(tasks) para el expediente completo.
+export function buildAdvisorContext(scope: "coach" | "consejo" | "cio", data: AdvisorContextData): string {
   const L: string[] = [];
   const today = todayStr();
   const weekStart = thisWeekKey();
 
-  if (scope === "consejo") {
+  if (scope === "consejo" || scope === "cio") {
     if (data.cartera) L.push(carteraTexto(data.cartera.meta, data.cartera.positions, true));
     if (data.patrimonioQuarters?.length) L.push(buildPatrimonioContext(data.patrimonioQuarters));
   }
 
-  const recentCheckins = data.checkins.slice(-5);
+  if (scope === "cio") {
+    const lastRev = data.weeklyReviews.slice(-2);
+    if (lastRev.length) {
+      L.push(
+        `Sus últimos cierres semanales: ${lastRev
+          .map(
+            (r) =>
+              `${r.rango || r.review_date}: "${r.note}"${r.done_count != null ? ` [${r.done_count} cerradas, ${r.late_count} atrasadas]` : ""}`,
+          )
+          .join(" ; ")}.`,
+      );
+    }
+    return "\n\n" + L.join("\n");
+  }
+
+  const recentCheckins = (data.checkins ?? []).slice(-5);
   if (recentCheckins.length) {
     L.push(
       `Sus últimos check-ins de energía: ${recentCheckins
@@ -235,19 +251,24 @@ export function buildAdvisorContext(scope: "coach" | "consejo", data: AdvisorCon
     }
   }
 
+  const habits = data.habits ?? [];
+  const habitLogs = data.habitLogs ?? [];
+  const weightLog = data.weightLog ?? [];
+  const examResults = data.examResults ?? [];
+
   const hb: string[] = [];
-  data.habits
+  habits
     .filter((h) => h.cadence === "daily")
     .forEach((h) => {
-      const dates = data.habitLogs.filter((l) => l.habit_id === h.id).map((l) => l.occurred_on);
+      const dates = habitLogs.filter((l) => l.habit_id === h.id).map((l) => l.occurred_on);
       const st = habitStreak(dates, today);
       const hoyHecho = dates.includes(today);
       hb.push(`${h.name}: ${hoyHecho ? "hecho hoy" : "aún no hoy"}, racha ${st}`);
     });
-  data.habits
+  habits
     .filter((h) => h.cadence === "week")
     .forEach((h) => {
-      const thisWeek = data.habitLogs.filter((l) => l.habit_id === h.id && l.occurred_on >= weekStart);
+      const thisWeek = habitLogs.filter((l) => l.habit_id === h.id && l.occurred_on >= weekStart);
       const tipos = thisWeek.map((l) => l.meta?.tipo || "sesión");
       hb.push(`${h.name}: ${thisWeek.length} de ${h.weekly_target ?? 0} esta semana${tipos.length ? ` (${tipos.join(", ")})` : ""}`);
     });
@@ -255,8 +276,8 @@ export function buildAdvisorContext(scope: "coach" | "consejo", data: AdvisorCon
     L.push(`Estado de sus hábitos innegociables: ${hb.join(" ; ")}. Si viene fallando alguno, menciónalo con delicadeza, como quien lo acompaña; si viene cumpliendo, reconócelo.`);
   }
 
-  if (data.weightLog.length) {
-    const sorted = [...data.weightLog].sort((a, b) => a.recorded_on.localeCompare(b.recorded_on));
+  if (weightLog.length) {
+    const sorted = [...weightLog].sort((a, b) => a.recorded_on.localeCompare(b.recorded_on));
     const last = sorted[sorted.length - 1];
     const min = sorted.reduce((a, b) => (b.kg < a.kg ? b : a));
     const max = sorted.reduce((a, b) => (b.kg > a.kg ? b : a));
@@ -286,9 +307,9 @@ export function buildAdvisorContext(scope: "coach" | "consejo", data: AdvisorCon
     L.push(l);
   }
 
-  if (data.examResults.length) {
+  if (examResults.length) {
     const porFecha: Record<string, ExamResult[]> = {};
-    data.examResults.forEach((e) => {
+    examResults.forEach((e) => {
       const f = e.taken_on ?? "sin-fecha";
       (porFecha[f] ??= []).push(e);
     });
