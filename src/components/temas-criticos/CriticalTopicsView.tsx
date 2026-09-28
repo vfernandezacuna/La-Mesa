@@ -317,8 +317,13 @@ export default function CriticalTopicsView({
           <div className="panel">
             <h2>Lectura de estado</h2>
             <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
-              Se actualiza sola cada vez que agregás algo nuevo más abajo.
+              Se actualiza sola cada vez que agregás algo nuevo más abajo, o pedísela de nuevo cuando quieras.
             </div>
+            {entries.length > 0 && (
+              <button className="ghost" onClick={() => void actualizarLectura(topic, entries)} disabled={statusLoading}>
+                Actualizar lectura
+              </button>
+            )}
             {!topic.status_summary ? (
               <div className="empty-note">Aún no hay una lectura — agregá una nota o material para generarla.</div>
             ) : (
