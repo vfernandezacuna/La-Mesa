@@ -36,7 +36,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             href={item.href}
             className={`nav-item ${pathname === item.href ? "active" : ""}`}
           >
-            <item.icon className="nav-icon" size={17} strokeWidth={2} aria-hidden="true" />
+            <item.icon className="nav-icon" size={19} strokeWidth={2.25} aria-hidden="true" />
             {item.label}
           </Link>
         ))}
