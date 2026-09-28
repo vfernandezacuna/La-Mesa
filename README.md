@@ -5,11 +5,14 @@ Migración del panel personal (antes un solo HTML con JS embebido) a Next.js
 
 ## Estado
 
-Fase 2 (scaffolding) y Fase 3 (datos) completas. Fase 4 en curso: la
-pestaña **Hoy** ya está migrada (captura con IA, foco de la semana, tu
-semana, tareas por Personal/Trabajo, hábitos, coach del día, reflexión
-diaria). Las otras 7 pestañas muestran "Próximamente" hasta que les toque
-su turno.
+Fase 2 (scaffolding) y Fase 3 (datos) completas. Fase 4 en curso: **Hoy**,
+**Calendario**, **Revisión semanal** y **Coach** ya están migradas. Coach
+incluye el check-in semanal (psicológico, guarda en `checkins`), la
+sentencia de salud (`health_verdicts`, se marca obsoleta cuando cambian
+peso o exámenes), el registro de peso con gráfico y carga masiva
+(`weight_log`), y los exámenes con extracción automática desde PDF
+(`exam_results`). Las otras 4 pestañas (Consejo, Inversiones, Patrimonio,
+Aprendizaje) muestran "Próximamente" hasta que les toque su turno.
 
 ## 1. Crear el proyecto en Supabase
 

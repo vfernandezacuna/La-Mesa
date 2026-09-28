@@ -59,3 +59,36 @@ export interface WeeklyReview {
   coach_accion: string | null;
   created_at: string;
 }
+
+export interface Checkin {
+  id: string;
+  user_id: string;
+  mood: number | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface WeightLog {
+  id: string;
+  user_id: string;
+  recorded_on: string;
+  kg: number;
+  created_at: string;
+}
+
+export interface ExamResult {
+  id: string;
+  user_id: string;
+  taken_on: string | null;
+  test_name: string;
+  value: string;
+  created_at: string;
+}
+
+export interface HealthVerdict {
+  id: string;
+  user_id: string;
+  verdict_text: string;
+  signature: string | null;
+  created_at: string;
+}

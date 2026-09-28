@@ -413,3 +413,82 @@ table.data td{padding:10px 10px 10px 0;border-bottom:1px solid var(--hairline);f
   .tab-item{padding:9px 8px;}
   .tab-item .tab-icon{font-size:1.1rem;}
 }
+
+/* ---------- Coach ---------- */
+.registro-panel{background:var(--surface);}
+.reg-bloque{margin-bottom:26px;}
+.reg-bloque:last-child{margin-bottom:0;}
+.reg-lbl{font-size:0.66rem;text-transform:uppercase;letter-spacing:1.4px;font-weight:700;color:var(--accent-deep);padding-bottom:7px;margin-bottom:13px;border-bottom:1px solid var(--hairline-strong);}
+
+/* Sentencia de salud */
+.veredicto{border:1px solid var(--hairline);border-left:3px solid var(--ink);border-radius:8px;padding:20px 22px;background:var(--surface);}
+.veredicto.obsoleto{border-left-color:var(--mag);}
+.ver-alerta{font-size:0.76rem;color:var(--mag-deep);background:var(--mag-tint);border-radius:8px;padding:8px 11px;margin-bottom:14px;}
+.ver-body{font-size:0.92rem;line-height:1.7;}
+.ver-body strong{color:var(--accent-deep);}
+.ver-pie{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid var(--hairline);font-size:0.72rem;color:var(--n600);flex-wrap:wrap;}
+.ver-link{color:var(--mag-deep);cursor:pointer;font-weight:600;background:none;border:none;padding:0;font-family:inherit;}
+.ver-link:hover{text-decoration:underline;}
+
+/* Peso: hero y gráfico */
+.peso-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;border:1px solid var(--hairline);border-top:3px solid var(--mag);border-radius:8px;padding:20px 22px;background:var(--surface);}
+.peso-val{font-family:var(--font-heading);font-size:2.6rem;font-weight:600;line-height:1;color:var(--mag-deep);letter-spacing:-.02em;}
+.peso-val .pv-u{font-size:1rem;color:var(--n600);margin-left:6px;font-weight:400;}
+.peso-refs{display:flex;flex-direction:column;gap:8px;min-width:180px;}
+.pr-item{display:flex;justify-content:space-between;gap:14px;font-size:0.76rem;}
+.pr-l{color:var(--n600);}
+.pr-v{font-family:var(--mono);font-weight:600;}
+.pr-v.down{color:var(--accent-deep);}
+.pr-v.up{color:var(--mag-deep);}
+.pr-v.neutral{color:var(--n700);}
+.peso-chart{margin-top:18px;}
+.peso-chart svg{display:block;overflow:visible;width:100%;height:210px;}
+.sp-ax{font-family:var(--mono);font-size:9px;fill:var(--n500);}
+.peso-chart-note{font-size:0.7rem;color:var(--n500);margin-top:8px;text-align:right;}
+.peso-hist{margin-top:16px;}
+.peso-hist summary{font-size:0.78rem;color:var(--n600);cursor:pointer;padding:8px 0;}
+.peso-hist summary:hover{color:var(--mag-deep);}
+.peso-bulk{margin-top:14px;}
+.peso-bulk summary{font-size:0.78rem;color:var(--n700);cursor:pointer;padding:6px 0;}
+.peso-bulk summary:hover{color:var(--mag-deep);}
+
+/* Tabla genérica de historial (peso, patrimonio) */
+.pat-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:0.8rem;}
+.pat-table th{text-align:right;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:var(--n600);font-weight:600;padding:7px 10px;border-bottom:1px solid var(--hairline-strong);}
+.pat-table th:first-child{text-align:left;}
+.pat-table td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--hairline);font-family:var(--mono);font-size:0.76rem;font-weight:500;color:var(--n700);}
+.pat-table td.pt-per{text-align:left;font-family:var(--font-body);color:var(--ink);font-weight:600;font-size:0.8rem;}
+.pat-table td.pt-net{color:var(--ink);font-weight:600;}
+.pat-table tr:hover td{background:var(--accent-tint);}
+.pt-del{color:var(--n500);cursor:pointer;opacity:.4;background:none;border:none;padding:0;}
+.pat-table tr:hover .pt-del{opacity:1;}
+.pt-del:hover{color:var(--mag-deep);}
+
+/* Tabla de exámenes */
+.exam-wrap{overflow-x:auto;}
+.exam-table{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:420px;}
+.exam-table th{text-align:center;font-size:0.62rem;text-transform:uppercase;letter-spacing:.8px;color:var(--n600);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--hairline-strong);white-space:nowrap;}
+.exam-table th.ex-idx{text-align:left;}
+.exam-table th .ex-y{font-size:0.9em;color:var(--n500);font-weight:400;}
+.exam-table td{text-align:center;padding:8px 10px;border-bottom:1px solid var(--hairline);font-family:var(--mono);font-size:0.78rem;color:var(--ink);white-space:nowrap;}
+.exam-table td.ex-idx{text-align:left;font-family:var(--font-body);font-size:0.84rem;color:var(--n700);}
+.exam-table tr:hover td{background:var(--surface);}
+.exam-table tr.ex-otro td.ex-idx{color:var(--n600);font-style:italic;}
+.exam-table td.ex-fuera{background:#fdf6dc;font-weight:600;}
+.ex-na{color:var(--n500);}
+.ex-arr{font-size:0.62em;margin-left:4px;vertical-align:1px;}
+.ex-arr.up{color:#b7791f;}
+.ex-arr.down{color:#2b6cb0;}
+
+/* Registro peso / exámenes */
+.pdf-drop{border:1px dashed var(--hairline-strong);border-radius:8px;padding:16px;text-align:center;background:var(--surface);}
+.pdf-drop-lbl{font-size:0.82rem;color:var(--n700);margin-bottom:10px;}
+.pdf-status{display:block;font-size:0.72rem;color:var(--mag-deep);margin-top:8px;font-family:var(--mono);}
+.pdf-preview-box{border:1px solid var(--hairline);border-left:3px solid var(--mag);border-radius:8px;padding:14px 16px;margin-top:14px;background:var(--surface);}
+.pdf-prev-head{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--mag-deep);font-weight:600;margin-bottom:10px;}
+.exam-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--hairline);font-size:0.88rem;}
+.exam-row .ex-date{font-family:var(--mono);font-size:0.74rem;color:var(--n600);min-width:82px;}
+.exam-row .ex-name{flex:1;}
+.exam-row .ex-val{font-family:var(--mono);font-weight:600;color:var(--mag-deep);}
+.exam-row .ex-del{color:var(--n500);cursor:pointer;font-size:0.85rem;background:none;border:none;padding:0;}
+.exam-row .ex-del:hover{color:var(--mag-deep);}
