@@ -286,7 +286,7 @@ export default function RevisionView({
                   </span>
                   <span
                     className="m-val"
-                    style={{ color: t.done ? "var(--accent-deep)" : "var(--mag-deep)" }}
+                    style={{ color: t.done ? "var(--accent-deep)" : "var(--azul-deep)" }}
                   >
                     {t.done ? "cerrada" : "sigue abierta"}
                   </span>

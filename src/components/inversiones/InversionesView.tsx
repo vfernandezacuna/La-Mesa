@@ -412,7 +412,7 @@ export default function InversionesView({
           <button onClick={() => void resumirNoticias()} disabled={newsLoading}>
             Resumir y analizar
           </button>{" "}
-          <button className="ghost" style={{ marginLeft: 6 }} onClick={limpiarNoticias}>
+          <button className="text-action" onClick={limpiarNoticias}>
             Limpiar
           </button>
         </div>

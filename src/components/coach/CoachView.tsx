@@ -143,9 +143,9 @@ function PesoChart({ data }: { data: WeightLog[] }) {
             </g>
           );
         })}
-        <polygon points={area} fill="var(--mag-tint)" opacity={0.55} />
-        <polyline points={pts} fill="none" stroke="var(--mag)" strokeWidth={1.8} strokeLinejoin="round" />
-        <circle cx={X(ult.recorded_on)} cy={Y(ult.kg)} r={4} fill="var(--mag-deep)" />
+        <polygon points={area} fill="var(--azul-tint)" opacity={0.55} />
+        <polyline points={pts} fill="none" stroke="var(--azul)" strokeWidth={1.8} strokeLinejoin="round" />
+        <circle cx={X(ult.recorded_on)} cy={Y(ult.kg)} r={4} fill="var(--azul-deep)" />
       </svg>
       <div className="peso-chart-note">
         Kilos · {sorted.length} mediciones desde {fechaCorta(sorted[0].recorded_on)}
@@ -645,7 +645,7 @@ export default function CoachView({
                       <tr key={p.id}>
                         <td className="pt-per">{fechaLarga(p.recorded_on)}</td>
                         <td className="pt-net">{p.kg.toFixed(2)}</td>
-                        <td style={{ color: d === null ? "var(--n500)" : d <= 0 ? "var(--accent-deep)" : "var(--mag-deep)" }}>
+                        <td style={{ color: d === null ? "var(--n500)" : d <= 0 ? "var(--accent-deep)" : "var(--azul-deep)" }}>
                           {d === null ? "—" : (d > 0 ? "+" : "") + d.toFixed(2)}
                         </td>
                         <td>
@@ -829,7 +829,7 @@ export default function CoachView({
               ))}
               <div style={{ marginTop: 12 }}>
                 <button onClick={() => void confirmarPdfExamenes()}>Guardar estos índices</button>{" "}
-                <button className="ghost" style={{ marginLeft: 6 }} onClick={() => setPdfPending(null)}>
+                <button className="text-action" onClick={() => setPdfPending(null)}>
                   Descartar
                 </button>
               </div>

@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { Sun, Calendar, RotateCcw, Compass, Scale, Landmark, LineChart, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/login/actions";
 
-const NAV_ITEMS = [
-  { href: "/", icon: "◆", label: "Hoy" },
-  { href: "/calendario", icon: "▦", label: "Calendario" },
-  { href: "/revision", icon: "↻", label: "Revisión" },
-  { href: "/coach", icon: "▲", label: "Coach" },
-  { href: "/consejo", icon: "⚖", label: "El Consejo" },
-  { href: "/patrimonio", icon: "$", label: "Patrimonio" },
-  { href: "/inversiones", icon: "◈", label: "Inversiones" },
+const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
+  { href: "/", icon: Sun, label: "Hoy" },
+  { href: "/calendario", icon: Calendar, label: "Calendario" },
+  { href: "/revision", icon: RotateCcw, label: "Revisión" },
+  { href: "/coach", icon: Compass, label: "Coach" },
+  { href: "/consejo", icon: Scale, label: "El Consejo" },
+  { href: "/patrimonio", icon: Landmark, label: "Patrimonio" },
+  { href: "/inversiones", icon: LineChart, label: "Inversiones" },
 ];
 
 const MOBILE_LABELS: Record<string, string> = {
@@ -35,7 +36,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
             href={item.href}
             className={`nav-item ${pathname === item.href ? "active" : ""}`}
           >
-            <span className="nav-icon">{item.icon}</span> {item.label}
+            <item.icon className="nav-icon" size={17} strokeWidth={2} aria-hidden="true" />
+            {item.label}
           </Link>
         ))}
 
@@ -62,7 +64,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             href={item.href}
             className={`tab-item ${pathname === item.href ? "active" : ""}`}
           >
-            <span className="tab-icon">{item.icon}</span>
+            <item.icon className="tab-icon" size={19} strokeWidth={2} aria-hidden="true" />
             <span className="tab-lbl">{MOBILE_LABELS[item.href] ?? item.label}</span>
           </Link>
         ))}

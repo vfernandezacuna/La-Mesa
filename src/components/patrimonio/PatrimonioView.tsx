@@ -698,7 +698,7 @@ export default function PatrimonioView({
               })}
             <div style={{ marginTop: 12 }}>
               <button onClick={() => void confirmarImport()}>Guardar todo</button>{" "}
-              <button className="ghost" style={{ marginLeft: 6 }} onClick={descartarImport}>
+              <button className="text-action" onClick={descartarImport}>
                 Descartar
               </button>
             </div>

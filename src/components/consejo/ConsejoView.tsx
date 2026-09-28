@@ -300,7 +300,7 @@ export default function ConsejoView({
                   <button onClick={() => void saveProfile()} disabled={profileSaving}>
                     Guardar perfil
                   </button>{" "}
-                  <button className="ghost" onClick={cancelProfile}>
+                  <button className="text-action" onClick={cancelProfile}>
                     Cancelar
                   </button>{" "}
                   <button className="ghost" style={{ marginLeft: 6 }} onClick={resetProfileDraft}>

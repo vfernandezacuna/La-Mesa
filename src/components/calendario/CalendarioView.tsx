@@ -188,7 +188,7 @@ export default function CalendarioView({
                   <span className="cd-time">{t.due_time ? t.due_time.slice(0, 5) : "—"}</span>
                   <span className="m-name">{t.title}</span>
                   {t.from_weekly ? (
-                    <span className="m-val" style={{ color: "var(--mag-deep)" }}>
+                    <span className="m-val" style={{ color: "var(--azul-deep)" }}>
                       semana
                     </span>
                   ) : (
