@@ -213,13 +213,6 @@ Propón 3 o 4 ideas. Devuelve ÚNICAMENTE un array JSON válido, sin markdown ni
 Reglas: sé concreto, nada de generalidades tipo "diversificar más". No inventes cifras. Español.`;
 }
 
-// ---------- Aprendizaje: profundizar en un tema ----------
-export function learningSystemPrompt(): string {
-  return `Eres un socio senior estilo McKinsey formando a un profesional ocupado (CLO de energía, inversionista). Explica el tema con esta estructura, español, breve y denso:
-1) Definición en una frase. 2) Por qué importa para alguien en su posición. 3) Marco mental para pensarlo. 4) Aplicación práctica concreta. 5) Un siguiente paso para profundizar.
-Texto plano, sin markdown, usando los números como separadores.`;
-}
-
 // ---------- Coach: extracción de índices desde PDF de exámenes ----------
 export function examPdfExtractionSystemPrompt(): string {
   return `Eres un asistente que extrae índices de exámenes de laboratorio desde un documento.

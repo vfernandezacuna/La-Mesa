@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { href: "/consejo", icon: "⚖", label: "El Consejo" },
   { href: "/patrimonio", icon: "$", label: "Patrimonio" },
   { href: "/inversiones", icon: "◈", label: "Inversiones" },
-  { href: "/aprendizaje", icon: "✎", label: "Aprendizaje" },
 ];
 
 const MOBILE_LABELS: Record<string, string> = {
