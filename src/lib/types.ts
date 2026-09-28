@@ -92,3 +92,74 @@ export interface HealthVerdict {
   signature: string | null;
   created_at: string;
 }
+
+export interface CouncilSession {
+  id: string;
+  user_id: string;
+  dilema: string;
+  response_json: CouncilResponse | null;
+  created_at: string;
+}
+
+export interface CouncilResponse {
+  ceo: string;
+  clo: string;
+  cio: string;
+  cco: string;
+  coachvoz: string;
+  coach: string;
+}
+
+export interface LearningLogEntry {
+  id: string;
+  user_id: string;
+  topic: string;
+  response_text: string | null;
+  created_at: string;
+}
+
+export type PatrimonioClassCode =
+  | "corrientes"
+  | "inversion"
+  | "inmueble"
+  | "retiro"
+  | "mueble"
+  | "nocorrientes_p";
+
+export interface PatrimonioQuarter {
+  id: string;
+  user_id: string;
+  year: number;
+  quarter: "Q1" | "Q2" | "Q3" | "Q4";
+  created_at: string;
+}
+
+export interface PatrimonioClassTotal {
+  quarter_id: string;
+  class_code: PatrimonioClassCode;
+  amount: number;
+}
+
+export interface InvestmentsFutalemu {
+  id: string;
+  user_id: string;
+  fecha: string;
+  capital: number;
+  caja: number;
+  invertido: number;
+  valor_mercado: number;
+  rent_anio: number;
+  rent_acum: number;
+  created_at: string;
+}
+
+export interface InvestmentsFutalemuPosition {
+  id: string;
+  snapshot_id: string;
+  ticker: string;
+  invertido: number;
+  valor_mercado: number;
+  cantidad: number;
+  precio_costo: number;
+  precio_mercado: number;
+}

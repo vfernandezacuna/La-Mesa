@@ -5,10 +5,20 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { askClaude } from "@/lib/claude-client";
 import { captureSystemPrompt, coachStripSystemPrompt } from "@/lib/prompts";
-import { buildTaskContext, appendProfile } from "@/lib/context";
+import { buildTaskContext, buildAdvisorContext, appendProfile } from "@/lib/context";
 import { daysUntil, mondayOf, thisWeekKey, weekRangeLabel, ymd } from "@/lib/date";
 import { dayOfYear, reflectionsMixed, quoteTagLabels } from "@/lib/quotes";
-import type { Habit, HabitLog, Task, TaskCategory, TaskPriority } from "@/lib/types";
+import type {
+  Checkin,
+  ExamResult,
+  Habit,
+  HabitLog,
+  Task,
+  TaskCategory,
+  TaskPriority,
+  WeeklyReview,
+  WeightLog,
+} from "@/lib/types";
 import FocusGrid from "./FocusGrid";
 import TaskRow from "./TaskRow";
 import EmptyState from "./EmptyState";
@@ -42,16 +52,24 @@ export default function HoyView({
   initialHabitLogs,
   profile,
   recentWeekKeys,
+  weeklyReviews,
   prefillDate,
   lastInsight,
+  checkins,
+  weightLog,
+  examResults,
 }: {
   initialTasks: Task[];
   habits: Habit[];
   initialHabitLogs: HabitLog[];
   profile: string;
   recentWeekKeys: string[];
+  weeklyReviews: WeeklyReview[];
   prefillDate?: string;
   lastInsight: LastInsight | null;
+  checkins: Checkin[];
+  weightLog: WeightLog[];
+  examResults: ExamResult[];
 }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -111,12 +129,29 @@ export default function HoyView({
   async function loadCoach() {
     const active = tasks.filter((t) => !t.done);
     const hour = new Date().getHours();
+    let ctxSemanal = "";
+    if (lastInsight?.coach_conclusion && lastInsight.review_date) {
+      const dias = Math.round(
+        (new Date(ymd(new Date()) + "T00:00:00").getTime() -
+          new Date(lastInsight.review_date + "T00:00:00").getTime()) /
+          86400000,
+      );
+      if (dias <= 7) {
+        ctxSemanal = `\n\nEn el cierre de su semana le dijiste esto — mantente COHERENTE con esa línea, es la misma conversación:\n"${lastInsight.coach_conclusion.slice(0, 700)}"`;
+      }
+    }
     const user =
       `Son las ${hour}h. ${
         active.length
           ? `Tiene ${active.length} tarea${active.length === 1 ? "" : "s"} pendiente${active.length === 1 ? "" : "s"}.`
           : "Hoy no tiene tareas capturadas todavía."
-      } ¿Cómo debería encarar el día?` + appendProfile(buildTaskContext(tasks), profile);
+      } ¿Cómo debería encarar el día?` +
+      appendProfile(
+        buildTaskContext(tasks) +
+          buildAdvisorContext("coach", { checkins, habits, habitLogs, weightLog, examResults, weeklyReviews }),
+        profile,
+      ) +
+      ctxSemanal;
     try {
       const txt = await askClaude(coachStripSystemPrompt(), user, 300);
       setCoachText(txt.trim());

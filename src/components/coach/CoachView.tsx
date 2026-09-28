@@ -8,9 +8,18 @@ import {
   healthVerdictSystemPrompt,
   examPdfExtractionSystemPrompt,
 } from "@/lib/prompts";
-import { buildTaskContext, buildHealthContext, appendProfile } from "@/lib/context";
+import { buildTaskContext, buildHealthContext, buildAdvisorContext, appendProfile } from "@/lib/context";
 import { todayStr } from "@/lib/date";
-import type { Checkin, ExamResult, Habit, HabitLog, Task, WeightLog, HealthVerdict } from "@/lib/types";
+import type {
+  Checkin,
+  ExamResult,
+  Habit,
+  HabitLog,
+  Task,
+  WeeklyReview,
+  WeightLog,
+  HealthVerdict,
+} from "@/lib/types";
 
 function esc(s: string) {
   return s;
@@ -155,6 +164,7 @@ export default function CoachView({
   tasks,
   profile,
   weeklyInsight,
+  weeklyReviews,
 }: {
   initialCheckins: Checkin[];
   initialWeightLog: WeightLog[];
@@ -164,6 +174,7 @@ export default function CoachView({
   habitLogs: HabitLog[];
   tasks: Task[];
   profile: string;
+  weeklyReviews: WeeklyReview[];
   weeklyInsight: {
     review_date: string | null;
     coach_conclusion: string | null;
@@ -193,7 +204,13 @@ export default function CoachView({
     setCheckinError(null);
     setCheckinResult(null);
     try {
-      const user = `Cierre de semana. Ánimo: ${mood ?? "no indicado"}/5. Su nota: ${note || "(sin nota)"}.` + healthCtx();
+      const user =
+        `Cierre de semana. Ánimo: ${mood ?? "no indicado"}/5. Su nota: ${note || "(sin nota)"}.` +
+        appendProfile(
+          buildTaskContext(tasks) +
+            buildAdvisorContext("coach", { checkins, habits, habitLogs, weightLog, examResults, weeklyReviews }),
+          profile,
+        );
       const raw = await askClaude(coachCheckinSystemPrompt(), user, 1600);
       setCheckinResult(raw.trim());
       const { data } = await supabase

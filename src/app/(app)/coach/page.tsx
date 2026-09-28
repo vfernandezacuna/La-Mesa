@@ -7,6 +7,7 @@ import type {
   HabitLog,
   HealthVerdict,
   Task,
+  WeeklyReview,
   WeightLog,
 } from "@/lib/types";
 
@@ -23,6 +24,7 @@ export default async function CoachPage() {
     tasksRes,
     profileRes,
     insightRes,
+    reviewsRes,
   ] = await Promise.all([
     supabase.from("checkins").select("*").order("created_at", { ascending: true }),
     supabase.from("weight_log").select("*").order("recorded_on", { ascending: true }),
@@ -39,6 +41,7 @@ export default async function CoachPage() {
       .order("review_date", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase.from("weekly_reviews").select("*").order("week_key", { ascending: true }),
   ]);
 
   return (
@@ -52,6 +55,7 @@ export default async function CoachPage() {
       tasks={(tasksRes.data as Task[]) ?? []}
       profile={profileRes.data?.content ?? ""}
       weeklyInsight={insightRes.data ?? null}
+      weeklyReviews={(reviewsRes.data as WeeklyReview[]) ?? []}
     />
   );
 }

@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { askClaude } from "@/lib/claude-client";
 import { analizarCierreSystemPrompt } from "@/lib/prompts";
-import { appendProfile, buildTaskContext } from "@/lib/context";
+import { appendProfile, buildAdvisorContext, buildTaskContext } from "@/lib/context";
 import { daysUntil, dueText, inThisWeek, mondayOf, ymd } from "@/lib/date";
-import type { Task, WeeklyReview } from "@/lib/types";
+import type { Checkin, ExamResult, Habit, HabitLog, Task, WeeklyReview, WeightLog } from "@/lib/types";
 
 interface SpeechRecognitionLike {
   lang: string;
@@ -25,11 +25,21 @@ export default function RevisionView({
   initialReviews,
   profile,
   prioPrefill,
+  checkins,
+  habits,
+  habitLogs,
+  weightLog,
+  examResults,
 }: {
   initialTasks: Task[];
   initialReviews: WeeklyReview[];
   profile: string;
   prioPrefill?: string;
+  checkins: Checkin[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
+  weightLog: WeightLog[];
+  examResults: ExamResult[];
 }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -192,7 +202,18 @@ export default function RevisionView({
 
     const user =
       `Su cierre de esta semana: "${nota}"\n\nSus cierres anteriores:\n${histTxt}` +
-      appendProfile(buildTaskContext(tasks), profile);
+      appendProfile(
+        buildTaskContext(tasks) +
+          buildAdvisorContext("coach", {
+            checkins,
+            habits,
+            habitLogs,
+            weightLog,
+            examResults,
+            weeklyReviews: previousReviews,
+          }),
+        profile,
+      );
 
     try {
       const raw = await askClaude(analizarCierreSystemPrompt(), user, 1400);
