@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { StickyNote, Paperclip } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWithFile } from "@/lib/claude-client";
 import {
@@ -18,6 +19,26 @@ interface ProposedTask {
   time: string | null;
   isDeadline: boolean;
   priority: TaskPriority;
+}
+
+// Paleta fija para distinguir temas a simple vista — se asigna por orden de
+// creación (no por posición en pantalla), así un tema no cambia de color
+// cuando se crea uno nuevo.
+const TOPIC_COLORS = ["#3D8F63", "#33517F", "#B8720E", "#A23E48", "#6B4C9A", "#1F7A72"];
+
+function topicColor(allTopics: CriticalTopic[], id: string): string {
+  const sorted = [...allTopics].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const idx = sorted.findIndex((t) => t.id === id);
+  return TOPIC_COLORS[(idx < 0 ? 0 : idx) % TOPIC_COLORS.length];
+}
+
+function fechaCorta(iso: string): string {
+  const label = new Date(iso).toLocaleDateString("es-CL", { day: "numeric", month: "short" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function diasDesde(iso: string): number {
+  return Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
 }
 
 async function prepareFileForClaude(file: File): Promise<{ base64: string; mediaType: string }> {
@@ -61,8 +82,10 @@ export default function CriticalTopicsView({
 
   const [entries, setEntries] = useState<CriticalTopicEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
+  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
 
   const topic = topics.find((t) => t.id === selectedId) ?? null;
+  const color = topic ? topicColor(topics, topic.id) : TOPIC_COLORS[0];
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +103,7 @@ export default function CriticalTopicsView({
       if (!cancelled) {
         setEntries((data as CriticalTopicEntry[]) ?? []);
         setEntriesLoading(false);
+        setExpandedEntries(new Set());
       }
     };
     void load();
@@ -87,6 +111,15 @@ export default function CriticalTopicsView({
       cancelled = true;
     };
   }, [selectedId, supabase]);
+
+  function toggleExpand(id: string) {
+    setExpandedEntries((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function crearTema() {
     const title = newTitle.trim();
@@ -226,6 +259,9 @@ export default function CriticalTopicsView({
     setComposing(false);
   }
 
+  const notesCount = entries.filter((e) => e.kind === "note").length;
+  const materialCount = entries.filter((e) => e.kind === "material").length;
+
   return (
     <>
       <h1 className="page-title">Temas críticos</h1>
@@ -235,15 +271,25 @@ export default function CriticalTopicsView({
       </div>
 
       <div className="topic-pills">
-        {topics.map((t) => (
-          <button
-            key={t.id}
-            className={`topic-pill ${t.id === selectedId ? "active" : ""}`}
-            onClick={() => setSelectedId(t.id)}
-          >
-            {t.title}
-          </button>
-        ))}
+        {topics.map((t) => {
+          const c = topicColor(topics, t.id);
+          const active = t.id === selectedId;
+          return (
+            <button
+              key={t.id}
+              className="topic-pill"
+              style={
+                active
+                  ? { borderColor: c, color: c, background: `color-mix(in srgb, ${c} 12%, var(--paper))` }
+                  : { borderColor: `color-mix(in srgb, ${c} 45%, var(--hairline-strong))` }
+              }
+              onClick={() => setSelectedId(t.id)}
+            >
+              <span className="topic-pill-dot" style={{ background: c }} />
+              {t.title}
+            </button>
+          );
+        })}
       </div>
 
       <div className="panel">
@@ -271,23 +317,22 @@ export default function CriticalTopicsView({
           <div className="panel">
             <h2>Lectura de estado</h2>
             <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
-              Se actualiza sola cada vez que agregás algo nuevo abajo.
+              Se actualiza sola cada vez que agregás algo nuevo más abajo.
             </div>
             {!topic.status_summary ? (
               <div className="empty-note">Aún no hay una lectura — agregá una nota o material para generarla.</div>
             ) : (
-              <div className="response-box">
+              <div className="response-box" style={{ borderLeftColor: color }}>
                 {topic.status_summary.split(/\n/).map((line, i) => {
                   const m = line.match(/^(SITUACIÓN ACTUAL:|RIESGOS Y PENDIENTES:|PRÓXIMOS PASOS:)(.*)$/);
                   if (m) {
                     return (
-                      <div key={i}>
+                      <div key={i} className="status-line" style={{ marginTop: i === 0 ? 0 : 15 }}>
                         <strong
                           style={{
-                            color: "var(--accent-deep)",
+                            color,
                             display: "block",
-                            marginTop: 15,
-                            marginBottom: 5,
+                            marginBottom: 6,
                             letterSpacing: 1,
                             fontSize: "0.72rem",
                             textTransform: "uppercase",
@@ -299,13 +344,19 @@ export default function CriticalTopicsView({
                       </div>
                     );
                   }
-                  return <div key={i}>{line}</div>;
+                  if (!line.trim()) return null;
+                  return (
+                    <div key={i} className="status-line">
+                      {line}
+                    </div>
+                  );
                 })}
               </div>
             )}
             {topic.status_updated_at && (
               <div style={{ fontSize: "0.72rem", color: "var(--n600)", marginTop: 10 }}>
-                Actualizado el {new Date(topic.status_updated_at).toLocaleString("es-CL")}
+                Actualizado el {fechaCorta(topic.status_updated_at)} (hace{" "}
+                {diasDesde(topic.status_updated_at) === 0 ? "menos de un día" : `${diasDesde(topic.status_updated_at)} días`})
               </div>
             )}
             {statusLoading && (
@@ -318,6 +369,47 @@ export default function CriticalTopicsView({
                 </div>
                 <div className="ail-sub">Releyendo todo el historial del tema.</div>
               </div>
+            )}
+          </div>
+
+          <div className="panel">
+            <h2>Historial del tema</h2>
+            {entries.length > 0 && (
+              <div style={{ fontSize: "0.76rem", color: "var(--n600)", margin: "-6px 0 16px 0" }}>
+                {notesCount} nota{notesCount === 1 ? "" : "s"} · {materialCount} archivo
+                {materialCount === 1 ? "" : "s"} · última entrada {fechaCorta(entries[entries.length - 1].created_at)}
+              </div>
+            )}
+            {entriesLoading ? (
+              <span className="loading">Cargando…</span>
+            ) : entries.length === 0 ? (
+              <span className="loading">Sin registros aún.</span>
+            ) : (
+              [...entries].reverse().map((e) => {
+                const expanded = expandedEntries.has(e.id);
+                const isLong = e.content_text.length > 220;
+                const isMaterial = e.kind === "material";
+                return (
+                  <div
+                    className="topic-entry"
+                    key={e.id}
+                    onClick={() => isLong && toggleExpand(e.id)}
+                    style={{ cursor: isLong ? "pointer" : "default" }}
+                  >
+                    <div className="te-icon" style={{ color: isMaterial ? "var(--azul-deep)" : "var(--accent-deep)" }}>
+                      {isMaterial ? <Paperclip size={15} /> : <StickyNote size={15} />}
+                    </div>
+                    <div className="te-body">
+                      <div className="te-meta">
+                        {fechaCorta(e.created_at)}
+                        {e.file_name ? ` · ${e.file_name}` : ""}
+                      </div>
+                      <div className={`te-text ${!expanded && isLong ? "clamped" : ""}`}>{e.content_text}</div>
+                      {isLong && <span className="te-toggle">{expanded ? "Ver menos" : "Ver más"}</span>}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
 
@@ -378,7 +470,12 @@ export default function CriticalTopicsView({
               {proposedTasks && (
                 <>
                   {proposedTasks.map((t, i) => (
-                    <div className="mini-row" key={i} style={{ cursor: "pointer" }} onClick={() => setProposedChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))}>
+                    <div
+                      className="mini-row"
+                      key={i}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setProposedChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))}
+                    >
                       <input
                         type="checkbox"
                         checked={proposedChecked[i] ?? false}
@@ -400,25 +497,6 @@ export default function CriticalTopicsView({
               {tasksSavedMsg && <div className="review-done" style={{ marginTop: 10 }}>{tasksSavedMsg}</div>}
             </div>
           )}
-
-          <div className="panel">
-            <h2>Historial del tema</h2>
-            {entriesLoading ? (
-              <span className="loading">Cargando…</span>
-            ) : entries.length === 0 ? (
-              <span className="loading">Sin registros aún.</span>
-            ) : (
-              [...entries].reverse().map((e) => (
-                <div className="log-entry" key={e.id}>
-                  <div className="meta">
-                    {new Date(e.created_at).toLocaleString("es-CL")}
-                    {e.kind === "material" ? ` · material${e.file_name ? ` (${e.file_name})` : ""}` : " · nota"}
-                  </div>
-                  <div style={{ whiteSpace: "pre-wrap" }}>{e.content_text}</div>
-                </div>
-              ))
-            )}
-          </div>
         </>
       )}
     </>
