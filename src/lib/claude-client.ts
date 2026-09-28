@@ -83,3 +83,36 @@ export async function askClaudeWithPdf(
     .map((b) => b.text ?? "")
     .join("\n");
 }
+
+// Variante genérica para adjuntar un PDF o una imagen en base64 (sin prefijo
+// data:) — usada por Temas críticos para archivar material variado.
+export async function askClaudeWithFile(
+  system: string,
+  base64Data: string,
+  mediaType: string,
+  userText: string,
+  maxTokens = 2000,
+): Promise<string> {
+  const isPdf = mediaType === "application/pdf";
+  const fileBlock = isPdf
+    ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } }
+    : { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } };
+  const res = await fetch("/api/claude", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system,
+      messages: [{ role: "user", content: [fileBlock, { type: "text", text: userText }] }],
+      maxTokens,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail ? `${data.error}: ${data.detail}` : data.error || "Error al llamar a Claude");
+  }
+  const blocks: ClaudeContentBlock[] = data.content ?? [];
+  return blocks
+    .filter((b) => b.type === "text")
+    .map((b) => b.text ?? "")
+    .join("\n");
+}

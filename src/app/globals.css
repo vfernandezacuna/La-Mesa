@@ -597,6 +597,13 @@ table.data td.num.neg{color:var(--azul-deep);font-weight:600;}
 .src-chip.on{color:var(--accent-deep);font-weight:600;}
 .src-chip.off{color:var(--n500);}
 
+/* Temas críticos — selector de tema */
+.topic-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;}
+.topic-pill{display:inline-flex;align-items:center;background:var(--paper);border:1px solid var(--hairline-strong);color:var(--n700);font-family:var(--font-heading);font-weight:600;font-size:0.85rem;padding:9px 16px;min-height:0;border-radius:20px;box-shadow:none;cursor:pointer;transition:.14s;white-space:nowrap;}
+.topic-pill:hover{border-color:var(--accent-deep);color:var(--accent-deep);background:var(--paper);transform:none;box-shadow:none;}
+.topic-pill:active{background:var(--accent-tint);transform:none;}
+.topic-pill.active{background:var(--accent-tint);border-color:var(--accent-deep);color:var(--accent-deep);}
+
 /* Tabla de exámenes */
 .exam-wrap{overflow-x:auto;}
 .exam-table{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:420px;}

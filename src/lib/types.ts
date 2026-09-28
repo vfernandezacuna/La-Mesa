@@ -149,6 +149,26 @@ export interface PatrimonioLineItem {
   amount: number;
 }
 
+export interface CriticalTopic {
+  id: string;
+  user_id: string;
+  title: string;
+  status_summary: string | null;
+  status_updated_at: string | null;
+  archived: boolean;
+  created_at: string;
+}
+
+export interface CriticalTopicEntry {
+  id: string;
+  topic_id: string;
+  user_id: string;
+  kind: "note" | "material";
+  content_text: string;
+  file_name: string | null;
+  created_at: string;
+}
+
 export interface MarketBriefing {
   id: string;
   user_id: string;

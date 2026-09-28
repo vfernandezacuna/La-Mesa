@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { Sun, Calendar, RotateCcw, Compass, Scale, Landmark, LineChart, type LucideIcon } from "lucide-react";
+import { Sun, Calendar, RotateCcw, Compass, Scale, Landmark, LineChart, Briefcase, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/login/actions";
 
 const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
@@ -14,11 +14,13 @@ const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/consejo", icon: Scale, label: "El Consejo" },
   { href: "/patrimonio", icon: Landmark, label: "Patrimonio" },
   { href: "/inversiones", icon: LineChart, label: "Inversiones" },
+  { href: "/temas-criticos", icon: Briefcase, label: "Temas críticos" },
 ];
 
 const MOBILE_LABELS: Record<string, string> = {
   "/calendario": "Mes",
   "/patrimonio": "Patrim.",
+  "/temas-criticos": "Temas",
 };
 
 export default function AppShell({ children }: { children: ReactNode }) {

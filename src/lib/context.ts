@@ -4,6 +4,7 @@ import { habitStreak } from "./habits";
 import { PROFILE_DEFAULT } from "./profile-default";
 import type {
   Checkin,
+  CriticalTopicEntry,
   Habit,
   HabitLog,
   InvestmentsFutalemu,
@@ -348,4 +349,21 @@ export function buildAdvisorContext(scope: "coach" | "consejo" | "cio", data: Ad
   }
 
   return "\n\n" + L.join("\n");
+}
+
+// ---------- Temas críticos ----------
+// Arma el historial cronológico de un tema para pedirle a la IA una lectura
+// de estado o para extraer tareas de la entrada más reciente.
+export function buildCriticalTopicContext(title: string, entries: CriticalTopicEntry[]): string {
+  const sorted = [...entries].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const lines = sorted.map((e) => {
+    const fecha = new Date(e.created_at).toLocaleDateString("es-CL", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const etiqueta = e.kind === "material" ? `Material${e.file_name ? ` (${e.file_name})` : ""}` : "Nota";
+    return `[${fecha} · ${etiqueta}]\n${e.content_text}`;
+  });
+  return `Tema: ${title}\n\n--- HISTORIAL (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
 }
