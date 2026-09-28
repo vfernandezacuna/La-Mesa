@@ -559,6 +559,38 @@ table.data td{padding:10px 10px 10px 0;border-bottom:1px solid var(--hairline);f
   .pat-table td,.pat-table th{padding:6px 5px;font-size:0.7rem;}
 }
 
+/* Cartera Futalemu (Inversiones) */
+.fut-head{display:flex;justify-content:space-between;gap:28px;flex-wrap:wrap;border:1px solid var(--hairline);border-top:3px solid var(--mag-deep);border-radius:8px;padding:28px;background:var(--surface);margin:16px 0 24px;box-shadow:var(--shadow-sm);transition:transform .16s ease,box-shadow .16s ease;}
+.fut-head:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.fut-val{font-family:var(--font-heading);font-size:2.4rem;font-weight:600;line-height:1.1;color:var(--mag-deep);letter-spacing:-.02em;}
+.fut-sub{font-family:var(--mono);font-size:0.76rem;color:var(--n600);margin-top:8px;}
+.fh-lbl{font-size:0.62rem;text-transform:uppercase;letter-spacing:1.4px;color:var(--n600);font-weight:600;margin-bottom:9px;}
+.fut-stats{display:flex;flex-direction:column;gap:7px;min-width:230px;}
+.fs-item{display:flex;justify-content:space-between;gap:16px;font-size:0.78rem;}
+.fs-l{color:var(--n600);}
+.fs-v{font-family:var(--mono);font-weight:600;color:var(--ink);}
+.fs-v.pos{color:var(--accent-deep);}
+table.data td.num{text-align:right;font-family:var(--mono);font-size:0.78rem;}
+table.data td.pos-name{font-weight:600;}
+table.data td.num.pos{color:var(--accent-deep);font-weight:600;}
+table.data td.num.neg{color:var(--mag-deep);font-weight:600;}
+.alloc-bar{display:flex;height:12px;border-radius:8px;overflow:hidden;margin-top:16px;gap:1px;background:var(--surface);}
+.alloc-seg{height:100%;background:var(--mag);}
+
+/* Ideas para investigar */
+.idea-card{border-left:2px solid var(--mag-deep);padding:4px 0 18px 18px;margin-bottom:20px;}
+.idea-card .i-head{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;}
+.idea-card .i-num{font-family:var(--font-heading);font-size:1.25rem;color:var(--accent);font-weight:600;flex-shrink:0;}
+.idea-card .i-title{font-family:var(--font-heading);font-weight:600;font-size:1.1rem;line-height:1.3;}
+.idea-card .i-field{margin-top:10px;font-size:0.93rem;line-height:1.55;}
+.idea-card .i-lbl{font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;font-weight:600;color:var(--n700);display:block;margin-bottom:3px;}
+.idea-card .i-field.risk .i-lbl{color:var(--mag-deep);}
+.idea-card .i-field.task .i-lbl{color:var(--accent-deep);}
+.ideas-disclaimer{font-size:0.82rem;color:var(--n700);border-top:1px solid var(--hairline);padding-top:14px;margin-top:16px;line-height:1.55;}
+.src-chip{display:inline-block;font-size:0.68rem;text-transform:uppercase;letter-spacing:.06em;margin-right:14px;color:var(--n600);}
+.src-chip.on{color:var(--accent-deep);font-weight:600;}
+.src-chip.off{color:var(--n500);}
+
 /* Tabla de exámenes */
 .exam-wrap{overflow-x:auto;}
 .exam-table{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:420px;}

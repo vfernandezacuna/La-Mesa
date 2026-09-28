@@ -149,6 +149,16 @@ export interface PatrimonioLineItem {
   amount: number;
 }
 
+export interface MarketBriefing {
+  id: string;
+  user_id: string;
+  kind: "brief" | "news";
+  input_text: string | null;
+  output_text: string | null;
+  output_html: string | null;
+  created_at: string;
+}
+
 export interface MarketIndicatorsCache {
   user_id: string;
   as_of: string;
