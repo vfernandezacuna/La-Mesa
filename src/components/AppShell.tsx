@@ -9,12 +9,12 @@ import { logout } from "@/app/login/actions";
 const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/", icon: Sun, label: "Hoy" },
   { href: "/calendario", icon: Calendar, label: "Calendario" },
+  { href: "/temas-criticos", icon: Briefcase, label: "Temas críticos CNX" },
   { href: "/revision", icon: RotateCcw, label: "Revisión" },
   { href: "/coach", icon: Compass, label: "Coach" },
   { href: "/consejo", icon: Scale, label: "El Consejo" },
   { href: "/patrimonio", icon: Landmark, label: "Patrimonio" },
   { href: "/inversiones", icon: LineChart, label: "Inversiones" },
-  { href: "/temas-criticos", icon: Briefcase, label: "Temas críticos CNX" },
 ];
 
 const MOBILE_LABELS: Record<string, string> = {
