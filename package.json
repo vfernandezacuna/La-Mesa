@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.120.0",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
+    "google-auth-library": "^11.1.0",
     "heic2any": "^0.0.4",
     "lucide-react": "^1.48.0",
     "next": "16.3.3",
