@@ -8,18 +8,10 @@ import {
   patrimonioImportSystemPrompt,
   indicadoresDelDiaSystemPrompt,
 } from "@/lib/prompts";
-import { appendProfile, buildAdvisorContext, buildTaskContext } from "@/lib/context";
+import { appendProfile, buildAdvisorContext, buildTaskContext, type CarteraContextEntry } from "@/lib/context";
 import { todayStr } from "@/lib/date";
 import type { PatrimonioQuarterFull } from "@/app/(app)/patrimonio/page";
-import type {
-  InvestmentsFutalemu,
-  InvestmentsFutalemuPosition,
-  MarketIndicatorsCache,
-  PatrimonioClassCode,
-  PatrimonioLineItem,
-  Task,
-  WeeklyReview,
-} from "@/lib/types";
+import type { MarketIndicatorsCache, PatrimonioClassCode, PatrimonioLineItem, Task, WeeklyReview } from "@/lib/types";
 
 declare global {
   interface Window {
@@ -74,14 +66,14 @@ export default function PatrimonioView({
   tasks,
   profile,
   weeklyReviews,
-  cartera,
+  carteras,
   initialIndicators,
 }: {
   quarters: PatrimonioQuarterFull[];
   tasks: Task[];
   profile: string;
   weeklyReviews: WeeklyReview[];
-  cartera: { meta: InvestmentsFutalemu; positions: InvestmentsFutalemuPosition[] } | null;
+  carteras: CarteraContextEntry[];
   initialIndicators: MarketIndicatorsCache | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -155,7 +147,7 @@ export default function PatrimonioView({
         `Mi patrimonio por trimestre:\n${serie}` +
         appendProfile(
           buildTaskContext(tasks) +
-            buildAdvisorContext("cio", { weeklyReviews, cartera, patrimonioQuarters: sorted }),
+            buildAdvisorContext("cio", { weeklyReviews, carteras, patrimonioQuarters: sorted }),
           profile,
         );
       const raw = await askClaude(patrimonioAnalysisSystemPrompt(), user, 1800);

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import ConsejoView from "@/components/consejo/ConsejoView";
+import { fetchCarteraEntries } from "@/lib/fetch-carteras";
 import type { PatrimonioQuarterTotals } from "@/lib/context";
 import type {
   Checkin,
@@ -7,8 +8,6 @@ import type {
   ExamResult,
   Habit,
   HabitLog,
-  InvestmentsFutalemu,
-  InvestmentsFutalemuPosition,
   LearningLogEntry,
   PatrimonioClassCode,
   PatrimonioClassTotal,
@@ -33,7 +32,7 @@ export default async function ConsejoPage() {
     sessionsRes,
     learningRes,
     quartersRes,
-    futalemuRes,
+    carteras,
   ] = await Promise.all([
     supabase.from("tasks").select("*"),
     supabase.from("profile").select("content").maybeSingle(),
@@ -50,7 +49,7 @@ export default async function ConsejoPage() {
       .select("*, patrimonio_class_totals(*)")
       .order("year", { ascending: true })
       .order("quarter", { ascending: true }),
-    supabase.from("investments_futalemu").select("*").order("fecha", { ascending: false }).limit(1),
+    fetchCarteraEntries(supabase),
   ]);
 
   const quarters = (
@@ -65,16 +64,6 @@ export default async function ConsejoPage() {
     }),
   );
 
-  const futalemu = ((futalemuRes.data as InvestmentsFutalemu[]) ?? [])[0] ?? null;
-  let cartera: { meta: InvestmentsFutalemu; positions: InvestmentsFutalemuPosition[] } | null = null;
-  if (futalemu) {
-    const positionsRes = await supabase
-      .from("investments_futalemu_positions")
-      .select("*")
-      .eq("snapshot_id", futalemu.id);
-    cartera = { meta: futalemu, positions: (positionsRes.data as InvestmentsFutalemuPosition[]) ?? [] };
-  }
-
   return (
     <ConsejoView
       tasks={(tasksRes.data as Task[]) ?? []}
@@ -87,7 +76,7 @@ export default async function ConsejoPage() {
       weeklyReviews={(reviewsRes.data as WeeklyReview[]) ?? []}
       initialSessions={(sessionsRes.data as CouncilSession[]) ?? []}
       learningTopics={((learningRes.data as LearningLogEntry[]) ?? []).map((l) => l.topic)}
-      cartera={cartera}
+      carteras={carteras}
       patrimonioQuarters={quarters}
     />
   );

@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import PatrimonioView from "@/components/patrimonio/PatrimonioView";
 import { todayStr } from "@/lib/date";
+import { fetchCarteraEntries } from "@/lib/fetch-carteras";
 import type { PatrimonioQuarterTotals } from "@/lib/context";
 import type {
-  InvestmentsFutalemu,
-  InvestmentsFutalemuPosition,
   MarketIndicatorsCache,
   PatrimonioClassCode,
   PatrimonioClassTotal,
@@ -22,7 +21,7 @@ export interface PatrimonioQuarterFull extends PatrimonioQuarterTotals {
 export default async function PatrimonioPage() {
   const supabase = await createClient();
 
-  const [tasksRes, profileRes, reviewsRes, quartersRes, lineItemsRes, futalemuRes, indicatorsRes] =
+  const [tasksRes, profileRes, reviewsRes, quartersRes, lineItemsRes, carteras, indicatorsRes] =
     await Promise.all([
       supabase.from("tasks").select("*"),
       supabase.from("profile").select("content").maybeSingle(),
@@ -33,7 +32,7 @@ export default async function PatrimonioPage() {
         .order("year", { ascending: true })
         .order("quarter", { ascending: true }),
       supabase.from("patrimonio_line_items").select("*"),
-      supabase.from("investments_futalemu").select("*").order("fecha", { ascending: false }).limit(1),
+      fetchCarteraEntries(supabase),
       supabase.from("market_indicators_cache").select("*").eq("as_of", todayStr()).maybeSingle(),
     ]);
 
@@ -50,23 +49,13 @@ export default async function PatrimonioPage() {
     lineItems: lineItems.filter((li) => li.quarter_id === q.id),
   }));
 
-  const futalemu = ((futalemuRes.data as InvestmentsFutalemu[]) ?? [])[0] ?? null;
-  let cartera: { meta: InvestmentsFutalemu; positions: InvestmentsFutalemuPosition[] } | null = null;
-  if (futalemu) {
-    const positionsRes = await supabase
-      .from("investments_futalemu_positions")
-      .select("*")
-      .eq("snapshot_id", futalemu.id);
-    cartera = { meta: futalemu, positions: (positionsRes.data as InvestmentsFutalemuPosition[]) ?? [] };
-  }
-
   return (
     <PatrimonioView
       quarters={quarters}
       tasks={(tasksRes.data as Task[]) ?? []}
       profile={profileRes.data?.content ?? ""}
       weeklyReviews={(reviewsRes.data as WeeklyReview[]) ?? []}
-      cartera={cartera}
+      carteras={carteras}
       initialIndicators={(indicatorsRes.data as MarketIndicatorsCache | null) ?? null}
     />
   );

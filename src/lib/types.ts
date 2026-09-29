@@ -169,6 +169,32 @@ export interface CriticalTopicEntry {
   created_at: string;
 }
 
+export interface InvestmentAccount {
+  id: string;
+  user_id: string;
+  name: string;
+  descripcion: string | null;
+  fecha: string;
+  capital: number | null;
+  caja: number | null;
+  invertido: number | null;
+  valor_mercado: number | null;
+  rent_anio: number | null;
+  rent_acum: number | null;
+  created_at: string;
+}
+
+export interface InvestmentAccountPosition {
+  id: string;
+  account_id: string;
+  ticker: string;
+  invertido: number;
+  valor_mercado: number;
+  cantidad: number;
+  precio_costo: number;
+  precio_mercado: number;
+}
+
 export interface MarketBriefing {
   id: string;
   user_id: string;

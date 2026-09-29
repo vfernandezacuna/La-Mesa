@@ -7,6 +7,8 @@ import type {
   CriticalTopicEntry,
   Habit,
   HabitLog,
+  InvestmentAccount,
+  InvestmentAccountPosition,
   InvestmentsFutalemu,
   InvestmentsFutalemuPosition,
   PatrimonioClassCode,
@@ -116,11 +118,27 @@ export function buildHealthContext(
   return "\n\n" + L.join("\n\n");
 }
 
-// ---------- Cartera Futalemu (usada por El Consejo / futuro CIO) ----------
+// ---------- Carteras de inversión (Futalemu, Cartera Personal, futuras —
+// usado por El Consejo / futuro CIO) ----------
+export interface CarteraMetaTexto {
+  fecha: string;
+  caja: number;
+  capital: number;
+  rent_acum: number;
+}
+export interface CarteraPosicionTexto {
+  ticker: string;
+  valor_mercado: number;
+  invertido: number;
+}
+
 export function carteraTexto(
-  meta: InvestmentsFutalemu,
-  positions: InvestmentsFutalemuPosition[],
+  nombre: string,
+  descripcion: string,
+  meta: CarteraMetaTexto,
+  positions: CarteraPosicionTexto[],
   detalle: boolean,
+  notaFinal?: string,
 ): string {
   const totVM = positions.reduce((s, p) => s + p.valor_mercado, 0);
   const lista = [...positions]
@@ -133,7 +151,45 @@ export function carteraTexto(
         : `${p.ticker} ${pct}%`;
     })
     .join(", ");
-  return `Cartera Inversiones Futalemu (sociedad de inversión, acciones chilenas) al ${meta.fecha}: ${lista}. Valor de mercado $${totVM.toLocaleString("es-CL")} más caja $${meta.caja.toLocaleString("es-CL")}. Capital aportado $${meta.capital.toLocaleString("es-CL")}; retorno acumulado +${Math.round(meta.rent_acum * 100)}%. IMPORTANTE: esta es SOLO la cartera accionaria de Futalemu; sus fondos mutuos, APV y demás activos están en el patrimonio, no aquí.`;
+  const base = `${nombre}${descripcion ? ` (${descripcion})` : ""} al ${meta.fecha}: ${lista}. Valor de mercado $${totVM.toLocaleString("es-CL")} más caja $${meta.caja.toLocaleString("es-CL")}. Capital aportado $${meta.capital.toLocaleString("es-CL")}; retorno acumulado +${Math.round(meta.rent_acum * 100)}%.`;
+  return notaFinal ? `${base} ${notaFinal}` : base;
+}
+
+export const FUTALEMU_DESCRIPCION = "sociedad de inversión, acciones chilenas";
+export const FUTALEMU_NOTA =
+  "IMPORTANTE: esta es SOLO la cartera accionaria de Futalemu; sus fondos mutuos, APV y demás activos están en el patrimonio, no aquí.";
+
+// Arma la lista de carteras (Futalemu + cualquier cuenta de inversión
+// nombrada) para pasarle a buildAdvisorContext — comparten esta función
+// las páginas de Consejo, Patrimonio e Inversiones.
+export function buildCarteraEntries(
+  futalemu: { meta: InvestmentsFutalemu; positions: InvestmentsFutalemuPosition[] } | null,
+  accounts: { account: InvestmentAccount; positions: InvestmentAccountPosition[] }[],
+): CarteraContextEntry[] {
+  const entries: CarteraContextEntry[] = [];
+  if (futalemu) {
+    entries.push({
+      nombre: "Cartera Inversiones Futalemu",
+      descripcion: FUTALEMU_DESCRIPCION,
+      meta: futalemu.meta,
+      positions: futalemu.positions,
+      notaFinal: FUTALEMU_NOTA,
+    });
+  }
+  accounts.forEach(({ account, positions }) => {
+    entries.push({
+      nombre: account.name,
+      descripcion: account.descripcion ?? "",
+      meta: {
+        fecha: account.fecha,
+        caja: account.caja ?? 0,
+        capital: account.capital ?? 0,
+        rent_acum: account.rent_acum ?? 0,
+      },
+      positions,
+    });
+  });
+  return entries;
 }
 
 const PATRIMONIO_CLASES_ACTIVO: PatrimonioClassCode[] = [
@@ -190,6 +246,14 @@ export function buildPatrimonioContext(quarters: PatrimonioQuarterTotals[]): str
   return linea + `\nSu meta de fondo: transitar de ejecutivo a empresario independiente en ~10 años, para lo cual necesitará capital líquido disponible.`;
 }
 
+export interface CarteraContextEntry {
+  nombre: string;
+  descripcion: string;
+  meta: CarteraMetaTexto;
+  positions: CarteraPosicionTexto[];
+  notaFinal?: string;
+}
+
 export interface AdvisorContextData {
   checkins?: Checkin[];
   habits?: Habit[];
@@ -199,7 +263,7 @@ export interface AdvisorContextData {
   weeklyReviews: WeeklyReview[];
   decisiones?: { dilema: string }[];
   learningTopics?: string[];
-  cartera?: { meta: InvestmentsFutalemu; positions: InvestmentsFutalemuPosition[] } | null;
+  carteras?: CarteraContextEntry[];
   patrimonioQuarters?: PatrimonioQuarterTotals[];
 }
 
@@ -214,7 +278,9 @@ export function buildAdvisorContext(scope: "coach" | "consejo" | "cio", data: Ad
   const weekStart = thisWeekKey();
 
   if (scope === "consejo" || scope === "cio") {
-    if (data.cartera) L.push(carteraTexto(data.cartera.meta, data.cartera.positions, true));
+    (data.carteras ?? []).forEach((c) => {
+      L.push(carteraTexto(c.nombre, c.descripcion, c.meta, c.positions, true, c.notaFinal));
+    });
     if (data.patrimonioQuarters?.length) L.push(buildPatrimonioContext(data.patrimonioQuarters));
   }
 

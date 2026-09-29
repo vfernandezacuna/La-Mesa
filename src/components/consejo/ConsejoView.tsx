@@ -4,7 +4,13 @@ import { useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { askClaude } from "@/lib/claude-client";
 import { consejoSystemPrompt } from "@/lib/prompts";
-import { buildTaskContext, buildAdvisorContext, appendProfile, type PatrimonioQuarterTotals } from "@/lib/context";
+import {
+  buildTaskContext,
+  buildAdvisorContext,
+  appendProfile,
+  type CarteraContextEntry,
+  type PatrimonioQuarterTotals,
+} from "@/lib/context";
 import { PROFILE_DEFAULT } from "@/lib/profile-default";
 import type {
   Checkin,
@@ -13,8 +19,6 @@ import type {
   ExamResult,
   Habit,
   HabitLog,
-  InvestmentsFutalemu,
-  InvestmentsFutalemuPosition,
   Task,
   WeeklyReview,
   WeightLog,
@@ -43,7 +47,7 @@ export default function ConsejoView({
   weeklyReviews,
   initialSessions,
   learningTopics,
-  cartera,
+  carteras,
   patrimonioQuarters,
 }: {
   tasks: Task[];
@@ -56,7 +60,7 @@ export default function ConsejoView({
   weeklyReviews: WeeklyReview[];
   initialSessions: CouncilSession[];
   learningTopics: string[];
-  cartera: { meta: InvestmentsFutalemu; positions: InvestmentsFutalemuPosition[] } | null;
+  carteras: CarteraContextEntry[];
   patrimonioQuarters: PatrimonioQuarterTotals[];
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -138,7 +142,7 @@ export default function ConsejoView({
               weeklyReviews,
               decisiones: sessions.map((s) => ({ dilema: s.dilema })),
               learningTopics,
-              cartera,
+              carteras,
               patrimonioQuarters,
             }),
           profileValue,
