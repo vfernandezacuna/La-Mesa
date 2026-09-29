@@ -1,5 +1,6 @@
 -- Referencia a la hoja de Google Sheets desde la cual cada cartera se
--- actualiza con el botón "Actualizar". Una fila por cartera: portfolio_key
+-- actualiza con el botón "Actualizar" (hoja pública, "Cualquiera con el
+-- link puede ver" — sin credenciales). Una fila por cartera: portfolio_key
 -- es 'futalemu' para la sociedad de inversión, o el id (uuid) de
 -- investment_accounts para cualquier otra cartera — así no hace falta
 -- tocar esta tabla cuando se agrega una cartera nueva.
@@ -9,7 +10,7 @@ create table portfolio_sources (
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   portfolio_key text not null,
   spreadsheet_id text not null,
-  sheet_name text,
+  gid text,
   last_synced_at timestamptz,
   created_at timestamptz not null default now(),
   unique (user_id, portfolio_key)

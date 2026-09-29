@@ -1,39 +1,26 @@
-import { JWT } from "google-auth-library";
-
-const SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
-
-function getClient(): JWT {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  if (!email || !key) {
-    throw new Error(
-      "Faltan las credenciales de Google (GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) en las variables de entorno.",
-    );
-  }
-  return new JWT({
-    email,
-    key: key.replace(/\\n/g, "\n"),
-    scopes: SCOPES,
-  });
-}
+import Papa from "papaparse";
 
 /**
- * Lee valores crudos de una hoja de Google Sheets (rango tipo "Hoja1!A1:G50")
- * usando una cuenta de servicio. La hoja debe estar compartida con el
- * client_email de la cuenta de servicio como Lector.
+ * Lee una hoja de Google Sheets pública ("Cualquiera con el link puede
+ * ver") como CSV, sin credenciales — vía la URL de exportación pública.
+ * `gid` identifica la pestaña exacta (aparece en la URL de la hoja
+ * después de "#gid="); si se omite, se exporta la primera pestaña.
  */
-export async function fetchSheetValues(spreadsheetId: string, range: string): Promise<string[][]> {
-  const client = getClient();
-  const { token } = await client.getAccessToken();
-  if (!token) {
-    throw new Error("No se pudo obtener el token de acceso de Google.");
-  }
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+export async function fetchSheetCsv(spreadsheetId: string, gid?: string): Promise<string> {
+  const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(spreadsheetId)}/export?format=csv${
+    gid ? `&gid=${encodeURIComponent(gid)}` : ""
+  }`;
+  const res = await fetch(url);
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Error al leer Google Sheets (${res.status}): ${body}`);
+    throw new Error(
+      `Error al leer Google Sheets (${res.status}). Verificá que la hoja esté compartida como "Cualquiera con el link puede ver".`,
+    );
   }
-  const data = (await res.json()) as { values?: string[][] };
-  return data.values ?? [];
+  return res.text();
+}
+
+/** Parsea CSV a filas de strings, manejando comillas y comas embebidas. */
+export function parseSheetCsv(csv: string): string[][] {
+  const result = Papa.parse<string[]>(csv, { skipEmptyLines: true });
+  return result.data;
 }
