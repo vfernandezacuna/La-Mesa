@@ -14,7 +14,7 @@ const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/consejo", icon: Scale, label: "El Consejo" },
   { href: "/patrimonio", icon: Landmark, label: "Patrimonio" },
   { href: "/inversiones", icon: LineChart, label: "Inversiones" },
-  { href: "/temas-criticos", icon: Briefcase, label: "Temas críticos" },
+  { href: "/temas-criticos", icon: Briefcase, label: "Temas críticos CNX" },
 ];
 
 const MOBILE_LABELS: Record<string, string> = {
