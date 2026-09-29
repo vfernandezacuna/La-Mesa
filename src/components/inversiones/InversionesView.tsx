@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWeb } from "@/lib/claude-client";
 import {
@@ -109,9 +110,33 @@ function PortfolioBlock({
   indicators: MarketIndicatorsCache | null;
   buildContext: () => string;
 }) {
+  const router = useRouter();
   const [cioLoading, setCioLoading] = useState(false);
   const [cioResult, setCioResult] = useState<string | null>(null);
   const [cioError, setCioError] = useState<string | null>(null);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncOk, setSyncOk] = useState<string | null>(null);
+
+  async function actualizarDesdeSheet() {
+    setSyncLoading(true);
+    setSyncError(null);
+    setSyncOk(null);
+    try {
+      const res = await fetch("/api/inversiones/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portfolioKey: portfolio.key }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "No se pudo actualizar.");
+      setSyncOk(`Actualizado al ${new Date(data.fecha + "T00:00:00").toLocaleDateString("es-CL")}.`);
+      router.refresh();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "No se pudo actualizar.");
+    }
+    setSyncLoading(false);
+  }
 
   async function analizarCartera() {
     setCioLoading(true);
@@ -144,11 +169,26 @@ function PortfolioBlock({
 
   return (
     <div className="panel">
-      <h2>{name}</h2>
-      {subtitle && (
-        <div className="page-sub" style={{ margin: "-6px 0 4px 0" }}>
-          {subtitle}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div>
+          <h2>{name}</h2>
+          {subtitle && (
+            <div className="page-sub" style={{ margin: "-6px 0 4px 0" }}>
+              {subtitle}
+            </div>
+          )}
         </div>
+        <button className="text-action" onClick={() => void actualizarDesdeSheet()} disabled={syncLoading}>
+          {syncLoading ? "Actualizando…" : "Actualizar"}
+        </button>
+      </div>
+      {syncError && (
+        <div className="empty-note" style={{ marginTop: 6, marginBottom: 6 }}>
+          {syncError}
+        </div>
+      )}
+      {syncOk && (
+        <div style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: 6, marginBottom: 6 }}>{syncOk}</div>
       )}
 
       {!positions.length ? (
