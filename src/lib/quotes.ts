@@ -1,10 +1,4 @@
-export type QuoteTag =
-  | "estoico"
-  | "biblia"
-  | "estrategia"
-  | "historia"
-  | "filosofia"
-  | "proverbio";
+export type QuoteTag = "munger" | "buffett" | "estoico" | "artedeguerra" | "biografia";
 
 export interface Quote {
   t: QuoteTag;
@@ -13,6 +7,24 @@ export interface Quote {
 }
 
 const reflections: Quote[] = [
+  // --- Charlie Munger (8) ---
+  { t: "munger", text: "Es notable cuánta ventaja de largo plazo hemos conseguido personas como nosotros con solo tratar de no ser tontos de forma consistente, en vez de tratar de ser muy inteligentes.", src: "Charlie Munger" },
+  { t: "munger", text: "El dinero grande no está en comprar y vender, sino en esperar.", src: "Charlie Munger" },
+  { t: "munger", text: "Pasa cada día tratando de ser un poco más sabio de lo que eras al despertar.", src: "Charlie Munger" },
+  { t: "munger", text: "Constantemente veo triunfar en la vida a personas que no son las más inteligentes, a veces ni las más disciplinadas, pero son máquinas de aprender.", src: "Charlie Munger" },
+  { t: "munger", text: "Saber lo que no sabes es más útil que ser brillante.", src: "Charlie Munger" },
+  { t: "munger", text: "En toda mi vida no he conocido a ninguna persona sabia que no leyera constantemente — ninguna, cero.", src: "Charlie Munger" },
+  { t: "munger", text: "Lo mejor que puede hacer un ser humano es ayudar a otro ser humano a saber más.", src: "Charlie Munger" },
+  { t: "munger", text: "Reconocer lo que no sabes es el amanecer de la sabiduría.", src: "Charlie Munger" },
+  // --- Warren Buffett (8) ---
+  { t: "buffett", text: "El precio es lo que pagas. El valor es lo que obtienes.", src: "Warren Buffett" },
+  { t: "buffett", text: "Sé temeroso cuando otros son codiciosos, y codicioso cuando otros son temerosos.", src: "Warren Buffett" },
+  { t: "buffett", text: "Es mucho mejor comprar una empresa maravillosa a un precio justo que una empresa justa a un precio maravilloso.", src: "Warren Buffett" },
+  { t: "buffett", text: "Alguien está sentado hoy a la sombra porque alguien plantó un árbol hace mucho tiempo.", src: "Warren Buffett" },
+  { t: "buffett", text: "El riesgo viene de no saber lo que estás haciendo.", src: "Warren Buffett" },
+  { t: "buffett", text: "La inversión más importante que puedes hacer es en ti mismo.", src: "Warren Buffett" },
+  { t: "buffett", text: "Toma veinte años construir una reputación y cinco minutos arruinarla.", src: "Warren Buffett" },
+  { t: "buffett", text: "Regla número 1: nunca pierdas dinero. Regla número 2: nunca olvides la regla número 1.", src: "Warren Buffett" },
   // --- Estoico (8) ---
   { t: "estoico", text: "No es lo que te sucede, sino cómo reaccionas ante ello lo que importa.", src: "Epicteto" },
   { t: "estoico", text: "Tienes poder sobre tu mente, no sobre los eventos externos. Date cuenta de esto y encontrarás fuerza.", src: "Marco Aurelio, Meditaciones" },
@@ -22,51 +34,24 @@ const reflections: Quote[] = [
   { t: "estoico", text: "El obstáculo en el camino se convierte en el camino. Dentro de cada dificultad hay una oportunidad de avanzar.", src: "Marco Aurelio, Meditaciones" },
   { t: "estoico", text: "Primero dite a ti mismo qué quieres ser; luego haz lo que tengas que hacer.", src: "Epicteto" },
   { t: "estoico", text: "Que tus principios sean como faros: fijos, mientras el mundo cambia a tu alrededor.", src: "Marco Aurelio, Meditaciones" },
-  // --- Bíblico (8) ---
-  { t: "biblia", text: "Todo lo puedo en Cristo que me fortalece.", src: "Filipenses 4:13" },
-  { t: "biblia", text: "Fíate del Señor de todo tu corazón, y no te apoyes en tu propia prudencia.", src: "Proverbios 3:5" },
-  { t: "biblia", text: "El corazón del hombre traza su rumbo, pero el Señor dirige sus pasos.", src: "Proverbios 16:9" },
-  { t: "biblia", text: "Esfuérzate y sé valiente; no temas ni desmayes, porque el Señor tu Dios estará contigo dondequiera que vayas.", src: "Josué 1:9" },
-  { t: "biblia", text: "El que es fiel en lo muy poco, también en lo más es fiel.", src: "Lucas 16:10" },
-  { t: "biblia", text: "Todo lo que hagas, hazlo de corazón, como para el Señor y no para los hombres.", src: "Colosenses 3:23" },
-  { t: "biblia", text: "Como el hierro se afila con el hierro, así el hombre se afina en el trato con su prójimo.", src: "Proverbios 27:17" },
-  { t: "biblia", text: "No os afanéis por el día de mañana, porque el día de mañana traerá su afán.", src: "Mateo 6:34" },
-  // --- Estrategia y liderazgo (8) ---
-  { t: "estrategia", text: "El precio de la grandeza es la responsabilidad.", src: "Winston Churchill" },
-  { t: "estrategia", text: "La estrategia sin táctica es el camino más lento a la victoria; la táctica sin estrategia es el ruido antes de la derrota.", src: "Sun Tzu" },
-  { t: "estrategia", text: "Lo importante rara vez es urgente, y lo urgente rara vez es importante.", src: "Dwight D. Eisenhower" },
-  { t: "estrategia", text: "El riesgo viene de no saber lo que estás haciendo.", src: "Warren Buffett" },
-  { t: "estrategia", text: "La oportunidad favorece a la mente preparada.", src: "Louis Pasteur" },
-  { t: "estrategia", text: "No busques al hombre brillante; busca al que evita los errores tontos de forma consistente.", src: "Charlie Munger" },
-  { t: "estrategia", text: "En medio de la dificultad yace la oportunidad.", src: "Albert Einstein" },
-  { t: "estrategia", text: "La calidad de tu vida es la calidad de tus decisiones repetidas.", src: "principio de gestión" },
-  // --- Historia y estadistas (8) ---
-  { t: "historia", text: "El éxito no es definitivo, el fracaso no es fatal: lo que cuenta es el valor para continuar.", src: "Winston Churchill" },
-  { t: "historia", text: "Casi todos los hombres pueden soportar la adversidad, pero si quieres probar el carácter de un hombre, dale poder.", src: "Abraham Lincoln" },
-  { t: "historia", text: "La mejor manera de predecir el futuro es crearlo.", src: "atribuido a Abraham Lincoln" },
-  { t: "historia", text: "No midas tu vida por lo que has cosechado, sino por las semillas que has plantado.", src: "proverbio de estadista" },
-  { t: "historia", text: "Un hombre que no arriesga nada por sus ideas, o no valen nada sus ideas, o no vale nada él.", src: "atribuido a Martin Luther King Jr." },
-  { t: "historia", text: "La libertad no vale nada si no incluye la libertad de equivocarse.", src: "Mahatma Gandhi" },
-  { t: "historia", text: "Nunca se llega tan lejos como cuando no se sabe hacia dónde se va.", src: "Napoleón Bonaparte" },
-  { t: "historia", text: "El pesimista ve dificultad en cada oportunidad; el optimista, oportunidad en cada dificultad.", src: "Winston Churchill" },
-  // --- Filosofía práctica (8) ---
-  { t: "filosofia", text: "Somos lo que hacemos repetidamente. La excelencia, entonces, no es un acto sino un hábito.", src: "Aristóteles" },
-  { t: "filosofia", text: "La vida no examinada no merece ser vivida.", src: "Sócrates" },
-  { t: "filosofia", text: "El que tiene un porqué para vivir puede soportar casi cualquier cómo.", src: "Friedrich Nietzsche" },
-  { t: "filosofia", text: "Nada da tanta paz como decidir, aunque sea una vez, dejar de intentar lo imposible.", src: "Montaigne" },
-  { t: "filosofia", text: "Un viaje de mil millas comienza con un solo paso.", src: "Lao Tsé" },
-  { t: "filosofia", text: "El que conoce a los demás es sabio; el que se conoce a sí mismo está iluminado.", src: "Lao Tsé" },
-  { t: "filosofia", text: "No es rico quien más tiene, sino quien menos necesita.", src: "Epicuro" },
-  { t: "filosofia", text: "El que tiene salud tiene esperanza, y el que tiene esperanza lo tiene todo.", src: "proverbio de Tales de Mileto" },
-  // --- Proverbios del mundo (8) ---
-  { t: "proverbio", text: "Si quieres llegar rápido, ve solo; si quieres llegar lejos, ve acompañado.", src: "Proverbio africano" },
-  { t: "proverbio", text: "La visión sin acción es un sueño; la acción sin visión es una pesadilla.", src: "Proverbio japonés" },
-  { t: "proverbio", text: "Cae siete veces, levántate ocho.", src: "Proverbio japonés" },
-  { t: "proverbio", text: "El bambú que se dobla es más fuerte que el roble que resiste.", src: "Proverbio japonés" },
-  { t: "proverbio", text: "Poco a poco se anda lejos.", src: "Proverbio latinoamericano" },
-  { t: "proverbio", text: "No cuentes los días, haz que los días cuenten.", src: "Proverbio popular" },
-  { t: "proverbio", text: "El mejor momento para plantar un árbol fue hace veinte años; el segundo mejor momento es ahora.", src: "Proverbio chino" },
-  { t: "proverbio", text: "La marea baja muestra quién nadaba desnudo.", src: "Proverbio del mundo financiero" },
+  // --- El arte de la guerra, Sun Tzu (8) ---
+  { t: "artedeguerra", text: "Conoce a tu enemigo y conócete a ti mismo; en cien batallas, nunca saldrás derrotado.", src: "Sun Tzu, El arte de la guerra" },
+  { t: "artedeguerra", text: "La oportunidad de vencer al enemigo te la da el enemigo mismo.", src: "Sun Tzu, El arte de la guerra" },
+  { t: "artedeguerra", text: "El supremo arte de la guerra es someter al enemigo sin luchar.", src: "Sun Tzu, El arte de la guerra" },
+  { t: "artedeguerra", text: "Todo el arte de la guerra se basa en el engaño.", src: "Sun Tzu, El arte de la guerra" },
+  { t: "artedeguerra", text: "En medio del caos, hay también oportunidad.", src: "Sun Tzu, El arte de la guerra" },
+  { t: "artedeguerra", text: "El general que gana la batalla hace muchos cálculos en su templo antes de que se libre la batalla.", src: "Sun Tzu, El arte de la guerra" },
+  { t: "artedeguerra", text: "Si conoces al enemigo y te conoces a ti mismo, no debes temer el resultado de cien batallas.", src: "Sun Tzu, El arte de la guerra" },
+  { t: "artedeguerra", text: "La rapidez es la esencia de la guerra.", src: "Sun Tzu, El arte de la guerra" },
+  // --- Grandes biografías (8) ---
+  { t: "biografia", text: "La forma de hacer dinero es comprar cuando la sangre corre por las calles.", src: "John D. Rockefeller, citado en Titán (Ron Chernow)" },
+  { t: "biografia", text: "Creo que el poder de hacer dinero es un don de Dios.", src: "John D. Rockefeller, citado en Titán (Ron Chernow)" },
+  { t: "biografia", text: "La unicidad de propósito es una de las cualidades esenciales para el éxito en la vida, sin importar cuál sea la meta.", src: "John D. Rockefeller, citado en Titán (Ron Chernow)" },
+  { t: "biografia", text: "Aquellos que no pueden gobernarse a sí mismos según la razón, necesitan ser gobernados por otros.", src: "Alexander Hamilton, citado en Hamilton (Ron Chernow)" },
+  { t: "biografia", text: "No dejes de lado el crédito hasta que hayas visto todo lo que puede hacer por ti.", src: "Alexander Hamilton, citado en Hamilton (Ron Chernow)" },
+  { t: "biografia", text: "La diligencia es la madre de la buena suerte.", src: "Benjamin Franklin, citado en Benjamin Franklin (Walter Isaacson)" },
+  { t: "biografia", text: "El trabajo va a llenar gran parte de tu vida, y la única forma de estar plenamente satisfecho es hacer lo que consideras un gran trabajo.", src: "Steve Jobs, citado en Steve Jobs (Walter Isaacson)" },
+  { t: "biografia", text: "No hay victoria a bajo costo. Cuando llega, llega con esfuerzo, y merece la pena por lo mismo que costó.", src: "Theodore Roosevelt, citado en The Rise of Theodore Roosevelt (Edmund Morris)" },
 ];
 
 // Entrelaza las reflexiones por categoría para que la rotación diaria
@@ -88,12 +73,11 @@ export const reflectionsMixed: Quote[] = (function () {
 })();
 
 export const quoteTagLabels: Record<QuoteTag, string> = {
+  munger: "Munger",
+  buffett: "Buffett",
   estoico: "Estoico",
-  biblia: "Bíblico",
-  estrategia: "Estrategia",
-  historia: "Historia",
-  filosofia: "Filosofía",
-  proverbio: "Proverbio",
+  artedeguerra: "Arte de la guerra",
+  biografia: "Biografía",
 };
 
 export function dayOfYear(d: Date): number {
