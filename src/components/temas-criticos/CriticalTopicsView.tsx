@@ -292,7 +292,7 @@ export default function CriticalTopicsView({
         })}
       </div>
 
-      <div className="panel">
+      <div className="topic-card">
         <div className="row">
           <input
             type="text"
@@ -314,7 +314,7 @@ export default function CriticalTopicsView({
         <div className="empty-note">Creá tu primer tema arriba para empezar a seguirle la pista.</div>
       ) : (
         <>
-          <div className="panel">
+          <div className="topic-card" style={{ borderTopColor: color, borderTopWidth: 3 }}>
             <h2>Lectura de estado</h2>
             <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
               Se actualiza sola cada vez que agregás algo nuevo más abajo, o pedísela de nuevo cuando quieras.
@@ -377,7 +377,7 @@ export default function CriticalTopicsView({
             )}
           </div>
 
-          <div className="panel">
+          <div className="topic-card">
             <h2>Historial del tema</h2>
             {entries.length > 0 && (
               <div style={{ fontSize: "0.76rem", color: "var(--n600)", margin: "-6px 0 16px 0" }}>
@@ -418,7 +418,7 @@ export default function CriticalTopicsView({
             )}
           </div>
 
-          <div className="panel">
+          <div className="topic-card">
             <h2>Agregar nota o material</h2>
             <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
               Pegá el texto de un correo o una nota, o adjuntá un archivo — PDF, foto (incluye HEIC del iPad) o
@@ -460,7 +460,7 @@ export default function CriticalTopicsView({
           </div>
 
           {(tasksLoading || proposedTasks) && (
-            <div className="panel">
+            <div className="topic-card">
               <h2>Tareas propuestas</h2>
               {tasksLoading && (
                 <div className="ai-loading" style={{ display: "block" }}>

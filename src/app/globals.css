@@ -605,6 +605,14 @@ table.data td.num.neg{color:var(--azul-deep);font-weight:600;}
 .topic-pill:active{transform:none;}
 .topic-pill-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
+/* Temas críticos — tarjetas (esta pestaña es la excepción deliberada al
+   resto del panel, que usa secciones abiertas sin caja) */
+.topic-card{background:var(--surface);border:1px solid var(--hairline);border-top:3px solid transparent;border-radius:12px;padding:26px 28px;margin-bottom:22px;box-shadow:var(--shadow-sm);transition:box-shadow .18s ease,transform .18s ease;}
+.topic-card:hover{box-shadow:var(--shadow-md);}
+.topic-card h2{margin-bottom:12px;}
+.topic-card h2::before{display:none;}
+@media(max-width:560px){.topic-card{padding:20px 18px;}}
+
 /* Temas críticos — historial, tarjetas compactas y plegables */
 .topic-entry{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--hairline);}
 .topic-entry:last-child{border-bottom:none;}
