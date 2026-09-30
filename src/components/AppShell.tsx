@@ -9,7 +9,7 @@ import { logout } from "@/app/login/actions";
 const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/", icon: Sun, label: "Hoy" },
   { href: "/calendario", icon: Calendar, label: "Calendario" },
-  { href: "/temas-criticos", icon: Briefcase, label: "Temas críticos CNX" },
+  { href: "/temas-criticos", icon: Briefcase, label: "CNX Tracker" },
   { href: "/revision", icon: RotateCcw, label: "Revisión" },
   { href: "/coach", icon: Compass, label: "Coach" },
   { href: "/consejo", icon: Scale, label: "El Consejo" },
@@ -20,7 +20,7 @@ const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
 const MOBILE_LABELS: Record<string, string> = {
   "/calendario": "Mes",
   "/patrimonio": "Patrim.",
-  "/temas-criticos": "Temas",
+  "/temas-criticos": "CNX",
 };
 
 export default function AppShell({ children }: { children: ReactNode }) {

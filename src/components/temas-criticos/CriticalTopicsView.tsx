@@ -264,7 +264,7 @@ export default function CriticalTopicsView({
 
   return (
     <>
-      <h1 className="page-title">Temas críticos CNX</h1>
+      <h1 className="page-title">CNX Tracker</h1>
       <div className="page-sub">
         Los temas de trabajo que estás siguiendo de cerca. Mandale notas o material y te mantiene la lectura de
         estado al día.
