@@ -6,12 +6,21 @@ import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWithFile } from "@/lib/claude-client";
 import {
   criticalTopicFileExtractionSystemPrompt,
+  criticalTopicItemsSystemPrompt,
   criticalTopicStatusSystemPrompt,
   criticalTopicTasksSystemPrompt,
 } from "@/lib/prompts";
-import { appendProfile, buildCriticalTopicContext } from "@/lib/context";
-import { ymd } from "@/lib/date";
-import type { CriticalTopic, CriticalTopicEntry, TaskPriority } from "@/lib/types";
+import { appendProfile, buildCriticalTopicContext, buildCriticalTopicItemsContext } from "@/lib/context";
+import { fechaCorta, ymd } from "@/lib/date";
+import { sanitizeProposals, type ItemPatch, type ItemProposal } from "@/lib/criticidad";
+import type {
+  CriticalTopic,
+  CriticalTopicEntry,
+  CriticalTopicItem,
+  CriticalTopicItemSnapshot,
+  TaskPriority,
+} from "@/lib/types";
+import { AsuntosCard, CriticidadMap, PropuestasBox } from "./Asuntos";
 
 interface ProposedTask {
   title: string;
@@ -30,11 +39,6 @@ function topicColor(allTopics: CriticalTopic[], id: string): string {
   const sorted = [...allTopics].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const idx = sorted.findIndex((t) => t.id === id);
   return TOPIC_COLORS[(idx < 0 ? 0 : idx) % TOPIC_COLORS.length];
-}
-
-function fechaCorta(iso: string): string {
-  const label = new Date(iso).toLocaleDateString("es-CL", { day: "numeric", month: "short" });
-  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function diasDesde(iso: string): number {
@@ -69,9 +73,13 @@ function isTextFile(file: File): boolean {
 
 export default function CriticalTopicsView({
   initialTopics,
+  initialItems,
+  initialSnapshots,
   profile,
 }: {
   initialTopics: CriticalTopic[];
+  initialItems: CriticalTopicItem[];
+  initialSnapshots: CriticalTopicItemSnapshot[];
   profile: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -79,6 +87,10 @@ export default function CriticalTopicsView({
   const [topics, setTopics] = useState<CriticalTopic[]>(initialTopics);
   const [selectedId, setSelectedId] = useState<string | null>(initialTopics[0]?.id ?? null);
   const [newTitle, setNewTitle] = useState("");
+
+  const [items, setItems] = useState<CriticalTopicItem[]>(initialItems);
+  const [snapshots, setSnapshots] = useState<CriticalTopicItemSnapshot[]>(initialSnapshots);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
   const [entries, setEntries] = useState<CriticalTopicEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
@@ -132,6 +144,151 @@ export default function CriticalTopicsView({
     setNewTitle("");
   }
 
+  // ---------- asuntos ----------
+  const topicItems = items.filter((i) => i.topic_id === selectedId);
+  const [proposals, setProposals] = useState<ItemProposal[] | null>(null);
+  const [proposalsChecked, setProposalsChecked] = useState<boolean[]>([]);
+  const [proposalsTopicId, setProposalsTopicId] = useState<string | null>(null);
+  const [proposalsSource, setProposalsSource] = useState<string | null>(null);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [itemsMsg, setItemsMsg] = useState<string | null>(null);
+  const proposalsHere = proposalsTopicId === selectedId;
+
+  function selectTopic(id: string) {
+    setSelectedId(id);
+    setExpandedItemId(null);
+    if (proposalsTopicId !== id) setItemsMsg(null);
+  }
+
+  function abrirAsunto(item: CriticalTopicItem) {
+    if (item.topic_id !== selectedId) selectTopic(item.topic_id);
+    setExpandedItemId(item.id);
+    setTimeout(() => {
+      document.getElementById(`asunto-${item.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+  }
+
+  async function proponerAsuntos(t: CriticalTopic, material: string, sourceEntryId: string | null, completo: boolean) {
+    const tItems = items.filter((i) => i.topic_id === t.id);
+    if (!tItems.length) return;
+    setProposalsLoading(true);
+    setProposalsTopicId(t.id);
+    setProposals(null);
+    setItemsMsg(null);
+    try {
+      const asuntos = buildCriticalTopicItemsContext(tItems, true);
+      const user = completo
+        ? `${asuntos}\n\nEvalúa los asuntos usando el historial completo del tema:\n\n${material}`
+        : `Tema: ${t.title}\n\n${asuntos}\n\n--- NOTA O MATERIAL NUEVO ---\n${material}`;
+      const raw = await askClaude(criticalTopicItemsSystemPrompt(ymd(new Date())), user, 2500);
+      const valid = sanitizeProposals(JSON.parse(raw.replace(/```json|```/g, "").trim()), tItems);
+      if (valid.length) {
+        setProposals(valid);
+        setProposalsChecked(valid.map(() => true));
+        setProposalsSource(sourceEntryId);
+      } else if (completo) {
+        setItemsMsg("No encontré información suficiente en el historial para evaluar los asuntos.");
+      }
+    } catch {
+      setItemsMsg("No se pudo generar la propuesta para los asuntos. Intentá de nuevo.");
+    }
+    setProposalsLoading(false);
+  }
+
+  async function persistirAsunto(item: CriticalTopicItem, patch: ItemPatch, sourceEntryId: string | null) {
+    const { data, error } = await supabase
+      .from("critical_topic_items")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", item.id)
+      .select()
+      .single();
+    if (error || !data) throw new Error(error?.message ?? "update failed");
+    setItems((prev) => prev.map((x) => (x.id === item.id ? (data as CriticalTopicItem) : x)));
+    const { data: snap } = await supabase
+      .from("critical_topic_item_snapshots")
+      .insert({
+        item_id: item.id,
+        criticidad: patch.criticidad,
+        avance: patch.avance,
+        tendencia: patch.tendencia,
+        estado: patch.estado,
+        source_entry_id: sourceEntryId,
+      })
+      .select()
+      .single();
+    if (snap) setSnapshots((prev) => [...prev, snap as CriticalTopicItemSnapshot]);
+  }
+
+  async function guardarAsunto(item: CriticalTopicItem, patch: ItemPatch) {
+    setItemsMsg(null);
+    try {
+      await persistirAsunto(item, patch, null);
+    } catch {
+      setItemsMsg("No se pudo guardar el asunto. Intentá de nuevo.");
+    }
+  }
+
+  async function aplicarPropuestas() {
+    if (!proposals) return;
+    setApplying(true);
+    setItemsMsg(null);
+    const elegidas = proposals.filter((_, i) => proposalsChecked[i]);
+    let fallidas = 0;
+    for (const p of elegidas) {
+      const item = items.find((x) => x.id === p.item_id);
+      if (!item) continue;
+      try {
+        await persistirAsunto(
+          item,
+          {
+            criticidad: p.criticidad,
+            avance: p.avance,
+            tendencia: p.tendencia,
+            estado: p.estado,
+            proximo_hito: p.proximo_hito,
+            proximo_hito_fecha: p.proximo_hito_fecha,
+          },
+          proposalsSource,
+        );
+      } catch {
+        fallidas++;
+      }
+    }
+    setApplying(false);
+    setProposals(null);
+    if (fallidas) setItemsMsg(`No se pudieron aplicar ${fallidas} cambio${fallidas > 1 ? "s" : ""}.`);
+  }
+
+  async function crearAsunto(name: string) {
+    if (!selectedId) return;
+    const maxOrder = topicItems.reduce((m, i) => Math.max(m, i.sort_order), 0);
+    const { data } = await supabase
+      .from("critical_topic_items")
+      .insert({ topic_id: selectedId, name, sort_order: maxOrder + 1 })
+      .select()
+      .single();
+    if (data) setItems((prev) => [...prev, data as CriticalTopicItem]);
+    else setItemsMsg("No se pudo crear el asunto. ¿Corriste la migración 0008?");
+  }
+
+  async function eliminarAsunto(item: CriticalTopicItem) {
+    const { error } = await supabase.from("critical_topic_items").delete().eq("id", item.id);
+    if (error) {
+      setItemsMsg("No se pudo eliminar el asunto.");
+      return;
+    }
+    setItems((prev) => prev.filter((x) => x.id !== item.id));
+    setSnapshots((prev) => prev.filter((s) => s.item_id !== item.id));
+    if (proposals) {
+      const keep = proposals.map((p) => p.item_id !== item.id);
+      const rest = proposals.filter((_, i) => keep[i]);
+      setProposals(rest.length ? rest : null);
+      setProposalsChecked(proposalsChecked.filter((_, i) => keep[i]));
+    }
+    setExpandedItemId(null);
+  }
+
   // ---------- composer ----------
   const [noteText, setNoteText] = useState("");
   const [fileLabel, setFileLabel] = useState("");
@@ -145,7 +302,8 @@ export default function CriticalTopicsView({
     if (!allEntries.length) return;
     setStatusLoading(true);
     try {
-      const user = buildCriticalTopicContext(t.title, allEntries) + appendProfile("", profile);
+      const tItems = items.filter((i) => i.topic_id === t.id);
+      const user = buildCriticalTopicContext(t.title, allEntries, tItems) + appendProfile("", profile);
       const raw = await askClaude(criticalTopicStatusSystemPrompt(), user, 1400);
       const { data } = await supabase
         .from("critical_topics")
@@ -253,6 +411,7 @@ export default function CriticalTopicsView({
       if (fileInputRef.current) fileInputRef.current.value = "";
       void actualizarLectura(topic, allEntries);
       void proponerTareas(contentText);
+      void proponerAsuntos(topic, contentText, newEntry?.id ?? null, false);
     } catch {
       setComposeError("No se pudo agregar. Intenta nuevamente, o revisa que el archivo no sea demasiado pesado.");
     }
@@ -266,9 +425,16 @@ export default function CriticalTopicsView({
     <>
       <h1 className="page-title">CNX Tracker</h1>
       <div className="page-sub">
-        Los temas de trabajo que estás siguiendo de cerca. Mandale notas o material y te mantiene la lectura de
-        estado al día.
+        Los temas estratégicos de Conexión Energía que seguís de cerca. Mandale notas o material y te mantiene la
+        lectura de estado y los asuntos al día.
       </div>
+
+      <CriticidadMap
+        topics={topics}
+        items={items}
+        colorOf={(id) => topicColor(topics, id)}
+        onOpen={abrirAsunto}
+      />
 
       <div className="topic-pills">
         {topics.map((t) => {
@@ -283,7 +449,7 @@ export default function CriticalTopicsView({
                   ? { borderColor: c, color: c, background: `color-mix(in srgb, ${c} 12%, var(--paper))` }
                   : { borderColor: `color-mix(in srgb, ${c} 45%, var(--hairline-strong))` }
               }
-              onClick={() => setSelectedId(t.id)}
+              onClick={() => selectTopic(t.id)}
             >
               <span className="topic-pill-dot" style={{ background: c }} />
               {t.title}
@@ -314,6 +480,33 @@ export default function CriticalTopicsView({
         <div className="empty-note">Creá tu primer tema arriba para empezar a seguirle la pista.</div>
       ) : (
         <>
+          <AsuntosCard
+            color={color}
+            items={topicItems}
+            snapshots={snapshots}
+            expandedId={expandedItemId}
+            canEvaluate={entries.length > 0 && !proposalsLoading}
+            evaluating={proposalsLoading && proposalsHere}
+            message={itemsMsg}
+            onToggle={(id) => setExpandedItemId((prev) => (prev === id ? null : id))}
+            onEvaluate={() => void proponerAsuntos(topic, buildCriticalTopicContext(topic.title, entries), null, true)}
+            onSave={guardarAsunto}
+            onDelete={(it) => void eliminarAsunto(it)}
+            onCreate={(name) => void crearAsunto(name)}
+          >
+            {proposals && proposalsHere && (
+              <PropuestasBox
+                items={topicItems}
+                proposals={proposals}
+                checked={proposalsChecked}
+                applying={applying}
+                onToggle={(i) => setProposalsChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))}
+                onApply={() => void aplicarPropuestas()}
+                onDiscard={() => setProposals(null)}
+              />
+            )}
+          </AsuntosCard>
+
           <div className="topic-card" style={{ borderTopColor: color, borderTopWidth: 3 }}>
             <h2>Lectura de estado</h2>
             <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
@@ -457,6 +650,23 @@ export default function CriticalTopicsView({
               </div>
             )}
             {composeError && <div className="empty-note">{composeError}</div>}
+            {proposalsHere && (proposalsLoading || proposals) && (
+              <div className="asuntos-hint">
+                {proposalsLoading
+                  ? "Revisando qué asuntos toca este material…"
+                  : `Propuse cambios en ${proposals!.length} asunto${proposals!.length === 1 ? "" : "s"}.`}
+                {!proposalsLoading && (
+                  <button
+                    className="text-action"
+                    onClick={() =>
+                      document.getElementById("asuntos-card")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                  >
+                    Revisar en Asuntos
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {(tasksLoading || proposedTasks) && (

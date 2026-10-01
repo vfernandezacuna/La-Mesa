@@ -54,3 +54,9 @@ export function dueText(dateStr: string | null): string {
   if (n <= 6) return dt.toLocaleDateString("es-CL", { weekday: "long" });
   return dt.toLocaleDateString("es-CL", { day: "numeric", month: "short" });
 }
+
+export function fechaCorta(iso: string): string {
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso + "T00:00:00") : new Date(iso);
+  const label = d.toLocaleDateString("es-CL", { day: "numeric", month: "short" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}

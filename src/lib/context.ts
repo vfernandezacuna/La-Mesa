@@ -2,9 +2,11 @@ import { daysUntil, todayStr, thisWeekKey } from "./date";
 import { catLabel } from "./tasks";
 import { habitStreak } from "./habits";
 import { PROFILE_DEFAULT } from "./profile-default";
+import { CRITICIDAD } from "./criticidad";
 import type {
   Checkin,
   CriticalTopicEntry,
+  CriticalTopicItem,
   Habit,
   HabitLog,
   InvestmentAccount,
@@ -420,7 +422,11 @@ export function buildAdvisorContext(scope: "coach" | "consejo" | "cio", data: Ad
 // ---------- Temas críticos ----------
 // Arma el historial cronológico de un tema para pedirle a la IA una lectura
 // de estado o para extraer tareas de la entrada más reciente.
-export function buildCriticalTopicContext(title: string, entries: CriticalTopicEntry[]): string {
+export function buildCriticalTopicContext(
+  title: string,
+  entries: CriticalTopicEntry[],
+  items: CriticalTopicItem[] = [],
+): string {
   const sorted = [...entries].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const lines = sorted.map((e) => {
     const fecha = new Date(e.created_at).toLocaleDateString("es-CL", {
@@ -431,5 +437,25 @@ export function buildCriticalTopicContext(title: string, entries: CriticalTopicE
     const etiqueta = e.kind === "material" ? `Material${e.file_name ? ` (${e.file_name})` : ""}` : "Nota";
     return `[${fecha} · ${etiqueta}]\n${e.content_text}`;
   });
-  return `Tema: ${title}\n\n--- HISTORIAL (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
+  const asuntos = items.length ? `\n\n${buildCriticalTopicItemsContext(items, false)}` : "";
+  return `Tema: ${title}${asuntos}\n\n--- HISTORIAL (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
+}
+
+// Evaluación actual de los asuntos de un tema. Con ids cuando la IA tiene que
+// devolver cambios referenciándolos; sin ids para la lectura de estado.
+export function buildCriticalTopicItemsContext(items: CriticalTopicItem[], withIds: boolean): string {
+  const lines = items.map((it) => {
+    const parts: string[] = [];
+    if (withIds) parts.push(`id=${it.id}`);
+    parts.push(it.descripcion ? `${it.name} (${it.descripcion})` : it.name);
+    parts.push(it.criticidad ? `criticidad ${it.criticidad} (${CRITICIDAD[it.criticidad].label.toLowerCase()})` : "sin evaluar");
+    if (it.avance != null) parts.push(`avance ${it.avance}%`);
+    if (it.tendencia) parts.push(`tendencia ${it.tendencia}`);
+    if (it.estado) parts.push(`estado: ${it.estado}`);
+    if (it.proximo_hito) {
+      parts.push(`próximo hito: ${it.proximo_hito}${it.proximo_hito_fecha ? ` (${it.proximo_hito_fecha})` : ""}`);
+    }
+    return `• ${parts.join(" · ")}`;
+  });
+  return `--- ASUNTOS DEL TEMA (evaluación actual) ---\n${lines.join("\n")}\n--- FIN DE ASUNTOS ---`;
 }
