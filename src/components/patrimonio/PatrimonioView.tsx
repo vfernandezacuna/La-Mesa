@@ -12,6 +12,7 @@ import { appendProfile, buildAdvisorContext, buildTaskContext, type CarteraConte
 import { todayStr } from "@/lib/date";
 import type { PatrimonioQuarterFull } from "@/app/(app)/patrimonio/page";
 import type { MarketIndicatorsCache, PatrimonioClassCode, PatrimonioLineItem, Task, WeeklyReview } from "@/lib/types";
+import { ActivosPasivosChart, type ChartRow } from "./ActivosPasivosChart";
 
 declare global {
   interface Window {
@@ -331,6 +332,20 @@ export default function PatrimonioView({
   const chartSerie = sorted.slice(-14);
   const chartNetos = chartSerie.map((r) => totalesDe(r).neto);
   const chartMax = Math.max(...chartNetos, 1);
+  const lineRows: ChartRow[] = sorted.map((r) => {
+    const t = totalesDe(r);
+    return {
+      id: r.id,
+      label: `${r.quarter} '${String(r.year).slice(2)}`,
+      values: {
+        activos: t.activos,
+        inmueble: r.totals.inmueble ?? 0,
+        inversion: r.totals.inversion ?? 0,
+        retiro: r.totals.retiro ?? 0,
+        pasivos: t.deudas,
+      },
+    };
+  });
 
   const acts = last
     ? CLASES_ACTIVO.map((c) => ({ ...c, val: last.totals[c.id] ?? 0 })).filter((e) => e.val > 0).sort((a, b) => b.val - a.val)
@@ -465,6 +480,17 @@ export default function PatrimonioView({
           </>
         )}
       </div>
+
+      {quarters.length > 0 && (
+        <div className="panel">
+          <h2>Activos vs. pasivos</h2>
+          <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
+            Cómo crecen tus activos — inmuebles, inversiones financieras y fondos de retiro — frente a tus deudas,
+            trimestre a trimestre.
+          </div>
+          <ActivosPasivosChart rows={lineRows} />
+        </div>
+      )}
 
       <div className="panel">
         <h2>Composición actual</h2>

@@ -631,6 +631,23 @@ button.btn-sm{padding:8px 14px;min-height:36px;font-size:0.85rem;}
 .te-text.clamped{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
 .te-toggle{display:inline-block;margin-top:5px;font-size:0.74rem;color:var(--accent-deep);font-weight:600;cursor:pointer;}
 
+/* Patrimonio — activos vs. pasivos */
+.ap-headline{font-size:0.9rem;color:var(--n700);margin-bottom:12px;}
+.ap-headline b{color:var(--ink);font-family:var(--font-heading);}
+.ap-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:10px;font-size:0.78rem;color:var(--n700);}
+.ap-leg{display:inline-flex;align-items:center;gap:7px;}
+.ap-wrap{position:relative;width:100%;}
+.ap-grid{stroke:var(--hairline);stroke-width:1;}
+.ap-base{stroke:var(--hairline-strong);stroke-width:1;}
+.ap-tick{font-family:var(--mono);font-size:11px;fill:var(--n600);}
+.ap-end{font-family:var(--font-body);font-size:12px;fill:var(--n700);}
+.ap-cross{stroke:var(--n500);stroke-width:1;}
+.ap-tip{position:absolute;width:230px;background:var(--paper);border:1px solid var(--hairline-strong);border-radius:8px;box-shadow:var(--shadow-md);padding:10px 12px;pointer-events:none;z-index:5;}
+.ap-tip-head{font-family:var(--font-heading);font-weight:700;font-size:0.82rem;margin-bottom:6px;}
+.ap-tip-row{display:flex;align-items:center;gap:7px;font-size:0.78rem;padding:2px 0;}
+.ap-tip-name{flex:1;color:var(--n700);}
+.ap-tip-val{font-family:var(--mono);font-weight:600;color:var(--ink);}
+
 /* CNX Tracker — tooltip liviano para el mapa y los gráficos */
 .has-tip{position:relative;}
 .has-tip:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);width:max-content;max-width:260px;background:var(--ink);color:var(--paper);font-family:var(--font-body);font-size:0.74rem;line-height:1.4;font-weight:500;letter-spacing:0;text-transform:none;padding:7px 10px;border-radius:6px;box-shadow:var(--shadow-md);z-index:20;pointer-events:none;white-space:normal;text-align:left;}
