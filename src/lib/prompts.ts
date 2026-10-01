@@ -13,18 +13,22 @@ export function criticalTopicStatusSystemPrompt(): string {
 
 Tu tarea es darle una LECTURA DE ESTADO de ese tema, como se la daría un jefe de gabinete o chief of staff que lee todo antes que él y le resume lo que importa. Él es GERENTE: supervisa el tema, no es quien ejecuta el día a día. Escríbele al nivel que le corresponde a alguien que decide y hace seguimiento, no al de quien está metido en el detalle operativo. Actualiza esto en general una vez por semana, así que tiene que poder leerlo en 20 segundos y quedar al día.
 
-Estructura tu respuesta en español, texto plano, con estos encabezados en MAYÚSCULAS seguidos de dos puntos, y cada sección en formato de lista (una idea por línea, nada de párrafos):
+Tono: como un colega de confianza que le cuenta en el pasillo cómo va el tema. Natural, claro y amable de leer — nada de jerga de informe, nada de listas interminables, nada de frases telegráficas sin verbo.
+
+Estructura tu respuesta en español, texto plano (sin markdown ni asteriscos), con estos encabezados en MAYÚSCULAS seguidos de dos puntos, exactamente en este orden:
+
+EN UNA FRASE: un titular de máximo 15 palabras que diga cómo está el tema hoy, en la misma línea del encabezado.
 
 SITUACIÓN ACTUAL:
-Máximo 4 bullets (cada línea empieza con "•"). Cada bullet es UNA idea, una línea, sin desarrollarla — la foto completa del tema en segundos: qué se sabe, qué se resolvió, qué sigue abierto. Nada de contexto de relleno ni antecedentes que él ya conoce.
+Dos o tres frases cortas en prosa (no bullets), que se lean de corrido como un párrafo breve: qué pasó, dónde está hoy y qué es lo que importa. Sin antecedentes que él ya conoce.
 
-RIESGOS Y PENDIENTES:
-Máximo 3 puntos numerados ("1.", "2.", "3."). Qué podría salir mal o qué compromiso/plazo sigue sin cerrarse. Una línea cada uno, con fecha y nombre si los tienes.
+RIESGOS:
+Hasta 3 puntos numerados ("1.", "2.", "3."), cada uno de máximo 14 palabras: qué podría salir mal o qué plazo sigue abierto, con fecha o nombre si los tienes. Si no hay riesgos relevantes, escribe "1. Sin riesgos relevantes por ahora."
 
 PRÓXIMOS PASOS:
-Máximo 3 acciones numeradas ("1.", "2.", "3."), a nivel de gerente: qué necesita ÉL decidir, aprobar, preguntar o vigilar — no tareas operativas que le corresponden al equipo o al encargado directo del tema.
+Hasta 3 acciones numeradas, cada una de máximo 14 palabras y empezando con un verbo, a nivel de gerente: qué necesita ÉL decidir, aprobar, pedir o vigilar — no tareas operativas del equipo.
 
-Reglas: basa todo en lo que te dieron, no inventes hechos ni fechas. Si el historial es escaso o contradictorio, dilo en una línea en vez de rellenar. Cada línea debe poder leerse sola, sin necesitar la anterior. Directo, denso, cero relleno.`;
+Reglas: basa todo en lo que te dieron, no inventes hechos ni fechas. Si el historial es escaso, dilo con naturalidad en la situación actual en vez de rellenar. Menos es más: si algo no aporta, no lo pongas.`;
 }
 
 // ---------- Temas críticos: propuesta de cambios en los asuntos de un tema ----------
@@ -56,7 +60,7 @@ Te paso una nota o el contenido de un material (correo, acta, documento) sobre u
 Devuelve ÚNICAMENTE un array JSON. Cada tarea:
 {"title":texto breve y claro de la acción,"date":"YYYY-MM-DD" o null (interpreta fechas relativas como "el viernes" o "en 10 días" respecto a hoy),"time":"HH:MM" 24h o null,"isDeadline":bool,"priority":"alta"|"media"|"baja"}
 
-Reglas: el título debe ser accionable (empezar con un verbo cuando se pueda), no una descripción pasiva del texto. Si una acción es de otra persona y no de él, igual inclúyela si él necesita hacerle seguimiento — pero refleja eso en el título (ej: "Seguir con Fulano por..."). Responde SOLO con el array JSON, sin markdown ni texto extra.`;
+Reglas: él es GERENTE, así que las tareas son de su nivel — decidir, aprobar, pedir, revisar o hacer seguimiento —, no el trabajo operativo del equipo. Máximo 5 tareas, solo las que valen la pena. El título debe ser accionable (empezar con un verbo), breve (máximo 12 palabras) y entenderse solo, sin el contexto del tema. Si una acción es de otra persona y no de él, igual inclúyela si él necesita hacerle seguimiento — pero refleja eso en el título (ej: "Seguir con Fulano por..."). Si te paso una lista de tareas que ya están propuestas o en su agenda, no las repitas. Responde SOLO con el array JSON, sin markdown ni texto extra.`;
 }
 
 export function captureSystemPrompt(todayStr: string, weekdayLabel: string): string {

@@ -609,7 +609,15 @@ table.data td.num.neg{color:var(--azul-deep);font-weight:600;}
    resto del panel, que usa secciones abiertas sin caja) */
 .topic-card{background:var(--surface);border:1px solid var(--hairline);border-top:3px solid transparent;border-radius:12px;padding:26px 28px;margin-bottom:22px;box-shadow:var(--shadow-sm);transition:box-shadow .18s ease,transform .18s ease;}
 .topic-card:hover{box-shadow:var(--shadow-md);}
-.topic-card h2{margin-bottom:12px;}
+.topic-card h2{font-family:var(--font-display);font-size:1.35rem;font-weight:600;letter-spacing:-.005em;line-height:1.2;margin:0 0 12px;}
+.topic-card.compact{padding:16px 20px;margin-bottom:16px;box-shadow:none;}
+.topic-card.compact:hover{box-shadow:var(--shadow-sm);}
+.topic-card.compact h2{font-size:1.05rem;margin-bottom:10px;}
+.topic-card.compact .hm-head{align-items:baseline;}
+.topic-card.compact textarea{min-height:64px;font-size:0.9rem;}
+.topic-card.compact .te-text{font-size:0.85rem;}
+.topic-card.compact .topic-entry{padding:10px 0;}
+button.btn-sm{padding:8px 14px;min-height:36px;font-size:0.85rem;}
 .topic-card h2::before{display:none;}
 @media(max-width:560px){.topic-card{padding:20px 18px;}}
 
@@ -696,6 +704,38 @@ button.btn-icon{display:inline-flex;align-items:center;gap:7px;}
   .asunto{position:relative;}
   .asunto-charts{grid-template-columns:1fr;}
 }
+
+/* CNX Tracker — lectura de estado */
+.lect-frase{font-family:var(--font-display);font-size:1.22rem;font-weight:600;line-height:1.35;border-left:3px solid var(--ink);padding:2px 0 2px 14px;margin-bottom:14px;}
+.lect-situacion{font-size:0.98rem;line-height:1.65;margin:0 0 18px;max-width:72ch;}
+.lect-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.lect-col{background:var(--paper);border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;}
+.lect-col-head{display:flex;align-items:center;gap:7px;font-size:0.68rem;text-transform:uppercase;letter-spacing:1.3px;font-weight:700;margin-bottom:10px;}
+.lect-col.riesgos .lect-col-head{color:var(--amarillo-deep);}
+.lect-col.pasos .lect-col-head{color:var(--azul-deep);}
+.lect-item{display:flex;align-items:flex-start;gap:10px;font-size:0.9rem;line-height:1.5;padding:5px 0;}
+.lect-num{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:0.72rem;font-weight:700;margin-top:1px;}
+.lect-col.riesgos .lect-num{background:var(--amarillo-tint);color:var(--amarillo-deep);}
+.lect-col.pasos .lect-num{background:var(--azul-tint);color:var(--azul-deep);}
+@media(max-width:640px){.lect-cols{grid-template-columns:1fr;}}
+
+/* CNX Tracker — tareas por hacer */
+.tp-row{background:var(--paper);border:1px solid var(--hairline);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.tp-top{display:flex;align-items:center;gap:8px;}
+textarea.tp-title{flex:1;min-width:0;min-height:0;resize:none;field-sizing:content;border:1px solid transparent;background:transparent;font-family:var(--font-heading);font-weight:600;font-size:0.93rem;line-height:1.4;padding:6px 8px;margin-left:-8px;border-radius:6px;}
+@media(min-width:700px){textarea.tp-title{overflow:hidden;}}
+textarea.tp-title:hover{border-color:var(--hairline);}
+textarea.tp-title:focus{border-color:var(--hairline-strong);background:var(--surface);box-shadow:none;}
+button.tp-dismiss{background:transparent;color:var(--n600);border:none;box-shadow:none;padding:6px;min-height:0;border-radius:6px;display:flex;}
+button.tp-dismiss:hover{background:var(--surface);color:var(--ink);transform:none;box-shadow:none;}
+.tp-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
+input.tp-date{border:1px solid var(--hairline-strong);border-radius:8px;padding:6px 8px;font-size:0.8rem;background:var(--paper);min-height:0;width:auto;}
+input.tp-date.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--surface);}
+select.tp-prio{border:1px solid var(--hairline-strong);border-radius:8px;padding:7px 8px;font-size:0.8rem;background:var(--paper);width:auto;}
+button.tp-add{margin-left:auto;padding:8px 14px;min-height:36px;font-size:0.85rem;}
+.tp-added{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:var(--verde-tint);color:var(--verde-deep);border-radius:8px;padding:9px 12px;font-size:0.85rem;margin-bottom:12px;}
+.tp-added a{margin-left:auto;font-weight:600;color:var(--verde-deep);}
+@media(max-width:560px){button.tp-add{margin-left:0;width:100%;}}
 
 /* CNX Tracker — propuestas de Claude sobre los asuntos */
 .prop-box{border:1px solid var(--hairline);border-left:3px solid var(--azul-deep);border-radius:10px;background:var(--paper);padding:14px 16px;margin-bottom:16px;}

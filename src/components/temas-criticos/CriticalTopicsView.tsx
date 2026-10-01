@@ -18,16 +18,33 @@ import type {
   CriticalTopicEntry,
   CriticalTopicItem,
   CriticalTopicItemSnapshot,
+  CriticalTopicTaskProposal,
   TaskPriority,
 } from "@/lib/types";
 import { AsuntosCard, CriticidadMap, PropuestasBox } from "./Asuntos";
+import { LecturaEstado } from "./LecturaEstado";
+import { TareasPorHacer, type TaskChoice } from "./TareasPorHacer";
 
 interface ProposedTask {
   title: string;
   date: string | null;
-  time: string | null;
   isDeadline: boolean;
   priority: TaskPriority;
+}
+
+const HISTORIAL_VISIBLE = 3;
+
+function normTitle(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, "").trim();
+}
+
+function destinoTexto(fecha: string | null): string {
+  if (!fecha) return "sin fecha (en Trabajo)";
+  if (fecha === ymd(new Date())) return "para hoy";
+  const manana = new Date();
+  manana.setDate(manana.getDate() + 1);
+  if (fecha === ymd(manana)) return "para mañana";
+  return `para el ${fechaCorta(fecha)}`;
 }
 
 // Paleta fija para distinguir temas a simple vista — se asigna por orden de
@@ -39,10 +56,6 @@ function topicColor(allTopics: CriticalTopic[], id: string): string {
   const sorted = [...allTopics].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const idx = sorted.findIndex((t) => t.id === id);
   return TOPIC_COLORS[(idx < 0 ? 0 : idx) % TOPIC_COLORS.length];
-}
-
-function diasDesde(iso: string): number {
-  return Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
 }
 
 async function prepareFileForClaude(file: File): Promise<{ base64: string; mediaType: string }> {
@@ -75,11 +88,13 @@ export default function CriticalTopicsView({
   initialTopics,
   initialItems,
   initialSnapshots,
+  initialTaskProposals,
   profile,
 }: {
   initialTopics: CriticalTopic[];
   initialItems: CriticalTopicItem[];
   initialSnapshots: CriticalTopicItemSnapshot[];
+  initialTaskProposals: CriticalTopicTaskProposal[];
   profile: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -95,6 +110,7 @@ export default function CriticalTopicsView({
   const [entries, setEntries] = useState<CriticalTopicEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+  const [showAllEntries, setShowAllEntries] = useState(false);
 
   const topic = topics.find((t) => t.id === selectedId) ?? null;
   const color = topic ? topicColor(topics, topic.id) : TOPIC_COLORS[0];
@@ -116,6 +132,7 @@ export default function CriticalTopicsView({
         setEntries((data as CriticalTopicEntry[]) ?? []);
         setEntriesLoading(false);
         setExpandedEntries(new Set());
+        setShowAllEntries(false);
       }
     };
     void load();
@@ -318,52 +335,86 @@ export default function CriticalTopicsView({
     setStatusLoading(false);
   }
 
-  // ---------- tareas propuestas ----------
-  const [proposedTasks, setProposedTasks] = useState<ProposedTask[] | null>(null);
-  const [proposedChecked, setProposedChecked] = useState<boolean[]>([]);
-  const [tasksLoading, setTasksLoading] = useState(false);
-  const [tasksSavedMsg, setTasksSavedMsg] = useState<string | null>(null);
+  // ---------- tareas por hacer ----------
+  const [taskProposals, setTaskProposals] = useState<CriticalTopicTaskProposal[]>(initialTaskProposals);
+  const [tasksLoadingTopic, setTasksLoadingTopic] = useState<string | null>(null);
+  const [tasksMsg, setTasksMsg] = useState<string | null>(null);
+  const [tasksAddedMsg, setTasksAddedMsg] = useState<string | null>(null);
+  const topicTaskProposals = taskProposals.filter((p) => p.topic_id === selectedId);
 
-  async function proponerTareas(text: string) {
-    setTasksLoading(true);
-    setTasksSavedMsg(null);
+  async function proponerTareas(t: CriticalTopic, text: string, sourceEntryId: string | null) {
+    setTasksLoadingTopic(t.id);
+    setTasksMsg(null);
     try {
       const today = ymd(new Date());
       const weekday = new Date().toLocaleDateString("es-CL", { weekday: "long" });
-      const raw = await askClaude(criticalTopicTasksSystemPrompt(today, weekday), text, 1000);
+      const pendientes = taskProposals.filter((p) => p.topic_id === t.id);
+      const yaPropuestas = pendientes.length
+        ? `\n\nTareas ya propuestas (no las repitas):\n${pendientes.map((p) => `- ${p.title}`).join("\n")}`
+        : "";
+      const raw = await askClaude(criticalTopicTasksSystemPrompt(today, weekday), text + yaPropuestas, 1200);
       const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as ProposedTask[];
-      if (parsed.length) {
-        setProposedTasks(parsed);
-        setProposedChecked(parsed.map(() => true));
-      } else {
-        setProposedTasks(null);
+      const vistos = new Set(pendientes.map((p) => normTitle(p.title)));
+      const rows = (Array.isArray(parsed) ? parsed : [])
+        .filter((x) => typeof x?.title === "string" && x.title.trim())
+        .filter((x) => {
+          const k = normTitle(x.title);
+          if (vistos.has(k)) return false;
+          vistos.add(k);
+          return true;
+        })
+        .slice(0, 5)
+        .map((x) => ({
+          topic_id: t.id,
+          title: x.title.trim().slice(0, 200),
+          due_date: typeof x.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? x.date : null,
+          priority: (["alta", "media", "baja"] as const).includes(x.priority) ? x.priority : "media",
+          is_deadline: !!x.isDeadline,
+          source_entry_id: sourceEntryId,
+        }));
+      if (rows.length) {
+        const { data, error } = await supabase.from("critical_topic_task_proposals").insert(rows).select();
+        if (error) throw new Error(error.message);
+        setTaskProposals((prev) => [...prev, ...((data as CriticalTopicTaskProposal[]) ?? [])]);
+      } else if (!sourceEntryId) {
+        setTasksMsg("No encontré tareas nuevas que valga la pena proponer.");
       }
     } catch {
-      // si falla la extracción, simplemente no se proponen tareas
+      setTasksMsg("No se pudieron proponer tareas. ¿Corriste la migración 0009?");
     }
-    setTasksLoading(false);
+    setTasksLoadingTopic(null);
   }
 
-  async function confirmarTareas() {
-    if (!proposedTasks) return;
-    const rows = proposedTasks
-      .filter((_, i) => proposedChecked[i])
-      .map((t) => ({
-        title: t.title,
-        category: "trabajo" as const,
-        due_date: t.date,
-        due_time: t.time,
-        is_deadline: t.isDeadline,
-        priority: t.priority,
+  async function agregarTareaALaMesa(p: CriticalTopicTaskProposal, choice: TaskChoice) {
+    setTasksMsg(null);
+    setTasksAddedMsg(null);
+    const { data: task, error } = await supabase
+      .from("tasks")
+      .insert({
+        title: choice.title,
+        category: "trabajo",
+        due_date: choice.due_date,
+        is_deadline: p.is_deadline,
+        priority: choice.priority,
         created_on: ymd(new Date()),
-      }));
-    if (rows.length) {
-      await supabase.from("tasks").insert(rows);
-      setTasksSavedMsg(
-        `${rows.length} tarea${rows.length > 1 ? "s" : ""} agregada${rows.length > 1 ? "s" : ""} a Hoy.`,
-      );
+      })
+      .select()
+      .single();
+    if (error || !task) {
+      setTasksMsg("No se pudo agregar la tarea a La Mesa. Intentá de nuevo.");
+      return;
     }
-    setProposedTasks(null);
+    await supabase
+      .from("critical_topic_task_proposals")
+      .update({ status: "agregada", title: choice.title, task_id: (task as { id: string }).id })
+      .eq("id", p.id);
+    setTaskProposals((prev) => prev.filter((x) => x.id !== p.id));
+    setTasksAddedMsg(`«${choice.title}» quedó en La Mesa ${destinoTexto(choice.due_date)}.`);
+  }
+
+  async function descartarTarea(p: CriticalTopicTaskProposal) {
+    setTaskProposals((prev) => prev.filter((x) => x.id !== p.id));
+    await supabase.from("critical_topic_task_proposals").update({ status: "descartada" }).eq("id", p.id);
   }
 
   async function agregar() {
@@ -373,7 +424,7 @@ export default function CriticalTopicsView({
     if (!text && !file) return;
     setComposing(true);
     setComposeError(null);
-    setProposedTasks(null);
+    setTasksAddedMsg(null);
     try {
       let contentText: string;
       let kind: "note" | "material" = "note";
@@ -410,7 +461,7 @@ export default function CriticalTopicsView({
       setFileLabel("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       void actualizarLectura(topic, allEntries);
-      void proponerTareas(contentText);
+      void proponerTareas(topic, contentText, newEntry?.id ?? null);
       void proponerAsuntos(topic, contentText, newEntry?.id ?? null, false);
     } catch {
       setComposeError("No se pudo agregar. Intenta nuevamente, o revisa que el archivo no sea demasiado pesado.");
@@ -458,7 +509,7 @@ export default function CriticalTopicsView({
         })}
       </div>
 
-      <div className="topic-card">
+      <div className="topic-card compact">
         <div className="row">
           <input
             type="text"
@@ -507,122 +558,41 @@ export default function CriticalTopicsView({
             )}
           </AsuntosCard>
 
-          <div className="topic-card" style={{ borderTopColor: color, borderTopWidth: 3 }}>
-            <h2>Lectura de estado</h2>
-            <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
-              Se actualiza sola cada vez que agregás algo nuevo más abajo, o pedísela de nuevo cuando quieras.
-            </div>
-            {entries.length > 0 && (
-              <button className="ghost" onClick={() => void actualizarLectura(topic, entries)} disabled={statusLoading}>
-                Actualizar lectura
-              </button>
-            )}
-            {!topic.status_summary ? (
-              <div className="empty-note">Aún no hay una lectura — agregá una nota o material para generarla.</div>
-            ) : (
-              <div className="response-box" style={{ borderLeftColor: color }}>
-                {topic.status_summary.split(/\n/).map((line, i) => {
-                  const m = line.match(/^(SITUACIÓN ACTUAL:|RIESGOS Y PENDIENTES:|PRÓXIMOS PASOS:)(.*)$/);
-                  if (m) {
-                    return (
-                      <div key={i} className="status-line" style={{ marginTop: i === 0 ? 0 : 15 }}>
-                        <strong
-                          style={{
-                            color,
-                            display: "block",
-                            marginBottom: 6,
-                            letterSpacing: 1,
-                            fontSize: "0.72rem",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {m[1]}
-                        </strong>
-                        {m[2]}
-                      </div>
-                    );
-                  }
-                  if (!line.trim()) return null;
-                  return (
-                    <div key={i} className="status-line">
-                      {line}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {topic.status_updated_at && (
-              <div style={{ fontSize: "0.72rem", color: "var(--n600)", marginTop: 10 }}>
-                Actualizado el {fechaCorta(topic.status_updated_at)} (hace{" "}
-                {diasDesde(topic.status_updated_at) === 0 ? "menos de un día" : `${diasDesde(topic.status_updated_at)} días`})
-              </div>
-            )}
-            {statusLoading && (
-              <div className="ai-loading" style={{ display: "block" }}>
-                <div className="ail-head">
-                  <span className="ail-spin"></span>
-                  <span>
-                    Actualizando la lectura<span className="ail-dots"></span>
-                  </span>
-                </div>
-                <div className="ail-sub">Releyendo todo el historial del tema.</div>
-              </div>
-            )}
-          </div>
+          <LecturaEstado
+            text={topic.status_summary}
+            color={color}
+            updatedAt={topic.status_updated_at}
+            canRefresh={entries.length > 0}
+            loading={statusLoading}
+            onRefresh={() => void actualizarLectura(topic, entries)}
+          />
 
-          <div className="topic-card">
-            <h2>Historial del tema</h2>
-            {entries.length > 0 && (
-              <div style={{ fontSize: "0.76rem", color: "var(--n600)", margin: "-6px 0 16px 0" }}>
-                {notesCount} nota{notesCount === 1 ? "" : "s"} · {materialCount} archivo
-                {materialCount === 1 ? "" : "s"} · última entrada {fechaCorta(entries[entries.length - 1].created_at)}
-              </div>
-            )}
-            {entriesLoading ? (
-              <span className="loading">Cargando…</span>
-            ) : entries.length === 0 ? (
-              <span className="loading">Sin registros aún.</span>
-            ) : (
-              [...entries].reverse().map((e) => {
-                const expanded = expandedEntries.has(e.id);
-                const isLong = e.content_text.length > 220;
-                const isMaterial = e.kind === "material";
-                return (
-                  <div
-                    className="topic-entry"
-                    key={e.id}
-                    onClick={() => isLong && toggleExpand(e.id)}
-                    style={{ cursor: isLong ? "pointer" : "default" }}
-                  >
-                    <div className="te-icon" style={{ color: isMaterial ? "var(--azul-deep)" : "var(--accent-deep)" }}>
-                      {isMaterial ? <Paperclip size={15} /> : <StickyNote size={15} />}
-                    </div>
-                    <div className="te-body">
-                      <div className="te-meta">
-                        {fechaCorta(e.created_at)}
-                        {e.file_name ? ` · ${e.file_name}` : ""}
-                      </div>
-                      <div className={`te-text ${!expanded && isLong ? "clamped" : ""}`}>{e.content_text}</div>
-                      {isLong && <span className="te-toggle">{expanded ? "Ver menos" : "Ver más"}</span>}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <TareasPorHacer
+            proposals={topicTaskProposals}
+            loading={tasksLoadingTopic === topic.id}
+            canPropose={entries.length > 0 && !tasksLoadingTopic}
+            message={tasksMsg}
+            addedMsg={tasksAddedMsg}
+            onPropose={() =>
+              void proponerTareas(
+                topic,
+                `${topic.status_summary ? `LECTURA DE ESTADO ACTUAL:\n${topic.status_summary}\n\n` : ""}${buildCriticalTopicContext(topic.title, entries, topicItems)}`,
+                null,
+              )
+            }
+            onAdd={agregarTareaALaMesa}
+            onDismiss={(p) => void descartarTarea(p)}
+          />
 
-          <div className="topic-card">
+          <div className="topic-card compact">
             <h2>Agregar nota o material</h2>
-            <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
-              Pegá el texto de un correo o una nota, o adjuntá un archivo — PDF, foto (incluye HEIC del iPad) o
-              texto plano.
-            </div>
             <textarea
-              placeholder="Pegá una nota, el cuerpo de un correo, o agregá contexto junto con el archivo…"
+              placeholder="Pegá una nota o el cuerpo de un correo, o adjuntá un PDF, foto (incluye HEIC del iPad) o texto…"
               value={noteText}
+              rows={3}
               onChange={(e) => setNoteText(e.target.value)}
             />
-            <div className="row" style={{ marginTop: 10, alignItems: "center" }}>
+            <div className="row" style={{ marginTop: 8, alignItems: "center" }}>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -630,11 +600,12 @@ export default function CriticalTopicsView({
                 style={{ display: "none" }}
                 onChange={(e) => setFileLabel(e.target.files?.[0]?.name ?? "")}
               />
-              <button className="ghost" onClick={() => fileInputRef.current?.click()}>
-                Adjuntar archivo
+              <button className="ghost btn-icon btn-sm" onClick={() => fileInputRef.current?.click()}>
+                <Paperclip size={14} aria-hidden="true" />
+                Adjuntar
               </button>
-              {fileLabel && <span className="pdf-status">{fileLabel}</span>}
-              <button onClick={() => void agregar()} disabled={composing} style={{ marginLeft: "auto" }}>
+              {fileLabel && <span className="pdf-status" style={{ marginTop: 0 }}>{fileLabel}</span>}
+              <button className="btn-sm" onClick={() => void agregar()} disabled={composing} style={{ marginLeft: "auto" }}>
                 Agregar
               </button>
             </div>
@@ -669,49 +640,58 @@ export default function CriticalTopicsView({
             )}
           </div>
 
-          {(tasksLoading || proposedTasks) && (
-            <div className="topic-card">
-              <h2>Tareas propuestas</h2>
-              {tasksLoading && (
-                <div className="ai-loading" style={{ display: "block" }}>
-                  <div className="ail-head">
-                    <span className="ail-spin"></span>
-                    <span>
-                      Buscando pendientes accionables<span className="ail-dots"></span>
-                    </span>
-                  </div>
+          <div className="topic-card compact">
+            <div className="hm-head" style={{ marginBottom: 6 }}>
+              <h2>Historial del tema</h2>
+              {entries.length > 0 && (
+                <div className="hm-sub">
+                  {notesCount} nota{notesCount === 1 ? "" : "s"} · {materialCount} archivo
+                  {materialCount === 1 ? "" : "s"} · última {fechaCorta(entries[entries.length - 1].created_at)}
                 </div>
               )}
-              {proposedTasks && (
-                <>
-                  {proposedTasks.map((t, i) => (
-                    <div
-                      className="mini-row"
-                      key={i}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => setProposedChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={proposedChecked[i] ?? false}
-                        onChange={() => setProposedChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))}
-                        style={{ marginRight: 10 }}
-                      />
-                      <span className="m-name">{t.title}</span>
-                      {t.date && <span className="m-val">{t.date}</span>}
-                    </div>
-                  ))}
-                  <div style={{ marginTop: 14 }}>
-                    <button onClick={() => void confirmarTareas()}>Agregar tareas seleccionadas</button>{" "}
-                    <button className="text-action" onClick={() => setProposedTasks(null)}>
-                      Descartar
-                    </button>
-                  </div>
-                </>
-              )}
-              {tasksSavedMsg && <div className="review-done" style={{ marginTop: 10 }}>{tasksSavedMsg}</div>}
             </div>
-          )}
+            {entriesLoading ? (
+              <span className="loading">Cargando…</span>
+            ) : entries.length === 0 ? (
+              <span className="loading">Sin registros aún.</span>
+            ) : (
+              <>
+                {[...entries]
+                  .reverse()
+                  .slice(0, showAllEntries ? undefined : HISTORIAL_VISIBLE)
+                  .map((e) => {
+                    const expanded = expandedEntries.has(e.id);
+                    const isLong = e.content_text.length > 160;
+                    const isMaterial = e.kind === "material";
+                    return (
+                      <div
+                        className="topic-entry"
+                        key={e.id}
+                        onClick={() => isLong && toggleExpand(e.id)}
+                        style={{ cursor: isLong ? "pointer" : "default" }}
+                      >
+                        <div className="te-icon" style={{ color: isMaterial ? "var(--azul-deep)" : "var(--accent-deep)" }}>
+                          {isMaterial ? <Paperclip size={14} /> : <StickyNote size={14} />}
+                        </div>
+                        <div className="te-body">
+                          <div className="te-meta">
+                            {fechaCorta(e.created_at)}
+                            {e.file_name ? ` · ${e.file_name}` : ""}
+                          </div>
+                          <div className={`te-text ${!expanded && isLong ? "clamped" : ""}`}>{e.content_text}</div>
+                          {isLong && <span className="te-toggle">{expanded ? "Ver menos" : "Ver más"}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                {entries.length > HISTORIAL_VISIBLE && (
+                  <button className="text-action" onClick={() => setShowAllEntries((v) => !v)} style={{ paddingLeft: 0 }}>
+                    {showAllEntries ? "Mostrar solo lo último" : `Ver todo el historial (${entries.length})`}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </>
       )}
     </>

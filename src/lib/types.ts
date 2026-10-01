@@ -169,6 +169,20 @@ export interface CriticalTopicEntry {
   created_at: string;
 }
 
+export interface CriticalTopicTaskProposal {
+  id: string;
+  topic_id: string;
+  user_id: string;
+  title: string;
+  due_date: string | null;
+  priority: TaskPriority;
+  is_deadline: boolean;
+  status: "pendiente" | "agregada" | "descartada";
+  task_id: string | null;
+  source_entry_id: string | null;
+  created_at: string;
+}
+
 export type Criticidad = 1 | 2 | 3 | 4;
 export type Tendencia = "mejora" | "estable" | "empeora";
 
