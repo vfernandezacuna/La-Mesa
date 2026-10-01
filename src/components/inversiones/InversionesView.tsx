@@ -21,8 +21,16 @@ import {
 } from "@/lib/context";
 import { todayStr } from "@/lib/date";
 import type { MarketBriefing, MarketIndicatorsCache, Task, WeeklyReview } from "@/lib/types";
+import { EvolucionValorChart } from "./EvolucionValorChart";
+
+export interface PortfolioHistoryPoint {
+  fecha: string;
+  capital: number;
+  valor: number;
+}
 
 export interface Portfolio {
+  history: PortfolioHistoryPoint[];
   key: string;
   name: string;
   descripcion: string;
@@ -278,6 +286,11 @@ function PortfolioBlock({
           </div>
         </>
       )}
+
+      <div className="ev-section">
+        <div className="ev-title">Evolución del valor</div>
+        <EvolucionValorChart history={portfolio.history} />
+      </div>
 
       <div style={{ marginTop: 14 }}>
         <button onClick={() => void analizarCartera()} disabled={cioLoading || !positions.length}>

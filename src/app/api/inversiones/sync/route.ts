@@ -118,6 +118,22 @@ export async function POST(request: Request) {
     if (positionsRes.error) {
       return NextResponse.json({ error: positionsRes.error.message }, { status: 500 });
     }
+
+    // Historia para el gráfico de evolución: una fila por fecha de la hoja.
+    await supabase.from("investment_account_snapshots").upsert(
+      {
+        user_id: user.id,
+        account_id: portfolioKey,
+        fecha: snapshot.fecha,
+        capital: snapshot.capital,
+        caja: snapshot.caja,
+        invertido: snapshot.invertido,
+        valor_mercado: snapshot.valor_mercado,
+        rent_anio: snapshot.rent_anio,
+        rent_acum: snapshot.rent_acum,
+      },
+      { onConflict: "account_id,fecha" },
+    );
   }
 
   await supabase.from("portfolio_sources").update({ last_synced_at: new Date().toISOString() }).eq(

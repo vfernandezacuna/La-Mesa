@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import InversionesView, { type Portfolio } from "@/components/inversiones/InversionesView";
+import InversionesView, { type Portfolio, type PortfolioHistoryPoint } from "@/components/inversiones/InversionesView";
 import { todayStr } from "@/lib/date";
 import { buildCarteraEntries, FUTALEMU_DESCRIPCION, type PatrimonioQuarterTotals } from "@/lib/context";
 import type {
   InvestmentAccount,
   InvestmentAccountPosition,
+  InvestmentAccountSnapshot,
   InvestmentsFutalemu,
   InvestmentsFutalemuPosition,
   MarketBriefing,
@@ -15,6 +16,15 @@ import type {
   Task,
   WeeklyReview,
 } from "@/lib/types";
+
+function historyPoint(h: {
+  fecha: string;
+  capital: number | null;
+  caja: number | null;
+  valor_mercado: number | null;
+}): PortfolioHistoryPoint {
+  return { fecha: h.fecha, capital: h.capital ?? 0, valor: (h.valor_mercado ?? 0) + (h.caja ?? 0) };
+}
 
 export default async function InversionesPage() {
   const supabase = await createClient();
@@ -38,7 +48,7 @@ export default async function InversionesPage() {
       .select("*, patrimonio_class_totals(*)")
       .order("year", { ascending: true })
       .order("quarter", { ascending: true }),
-    supabase.from("investments_futalemu").select("*").order("fecha", { ascending: false }).limit(1),
+    supabase.from("investments_futalemu").select("*").order("fecha", { ascending: true }),
     supabase.from("investment_accounts").select("*").order("created_at", { ascending: true }),
     supabase
       .from("market_briefings")
@@ -69,7 +79,8 @@ export default async function InversionesPage() {
     }),
   );
 
-  const futalemuRow = ((futalemuRes.data as InvestmentsFutalemu[]) ?? [])[0] ?? null;
+  const futalemuHistory = (futalemuRes.data as InvestmentsFutalemu[]) ?? [];
+  const futalemuRow = futalemuHistory[futalemuHistory.length - 1] ?? null;
   let futalemuPositions: InvestmentsFutalemuPosition[] = [];
   if (futalemuRow) {
     const positionsRes = await supabase
@@ -80,6 +91,18 @@ export default async function InversionesPage() {
   }
 
   const accounts = (accountsRes.data as InvestmentAccount[]) ?? [];
+  const accountSnapshotsRes = accounts.length
+    ? await supabase
+        .from("investment_account_snapshots")
+        .select("*")
+        .in(
+          "account_id",
+          accounts.map((a) => a.id),
+        )
+        .order("fecha", { ascending: true })
+    : { data: [] };
+  const accountSnapshots = (accountSnapshotsRes.data as InvestmentAccountSnapshot[] | null) ?? [];
+
   const accountsWithPositions = await Promise.all(
     accounts.map(async (account) => {
       const positionsRes = await supabase
@@ -108,6 +131,7 @@ export default async function InversionesPage() {
         rent_acum: futalemuRow.rent_acum,
       },
       positions: futalemuPositions,
+      history: futalemuHistory.map(historyPoint),
     });
   }
   accountsWithPositions.forEach(({ account, positions }) => {
@@ -126,6 +150,7 @@ export default async function InversionesPage() {
         rent_acum: account.rent_acum ?? 0,
       },
       positions,
+      history: accountSnapshots.filter((h) => h.account_id === account.id).map(historyPoint),
     });
   });
 

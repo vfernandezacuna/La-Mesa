@@ -230,6 +230,20 @@ export interface InvestmentAccount {
   created_at: string;
 }
 
+export interface InvestmentAccountSnapshot {
+  id: string;
+  account_id: string;
+  user_id: string;
+  fecha: string;
+  capital: number | null;
+  caja: number | null;
+  invertido: number | null;
+  valor_mercado: number | null;
+  rent_anio: number | null;
+  rent_acum: number | null;
+  created_at: string;
+}
+
 export interface InvestmentAccountPosition {
   id: string;
   account_id: string;
