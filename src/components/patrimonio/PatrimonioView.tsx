@@ -340,7 +340,7 @@ export default function PatrimonioView({
       values: {
         activos: t.activos,
         inmueble: r.totals.inmueble ?? 0,
-        inversion: r.totals.inversion ?? 0,
+        efectivoInv: (r.totals.corrientes ?? 0) + (r.totals.inversion ?? 0),
         retiro: r.totals.retiro ?? 0,
         pasivos: t.deudas,
       },
@@ -485,7 +485,7 @@ export default function PatrimonioView({
         <div className="panel">
           <h2>Activos vs. pasivos</h2>
           <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
-            Cómo crecen tus activos — inmuebles, inversiones financieras y fondos de retiro — frente a tus deudas,
+            Cómo crecen tus activos — inmuebles, efectivo e inversiones financieras, e inversiones de retiro — frente a tus pasivos totales,
             trimestre a trimestre.
           </div>
           <ActivosPasivosChart rows={lineRows} />

@@ -656,7 +656,7 @@ button.btn-sm{padding:8px 14px;min-height:36px;font-size:0.85rem;}
 .ap-tick{font-family:var(--mono);font-size:11px;fill:var(--n600);}
 .ap-end{font-family:var(--font-body);font-size:12px;fill:var(--n700);}
 .ap-cross{stroke:var(--n500);stroke-width:1;}
-.ap-tip{position:absolute;width:230px;background:var(--paper);border:1px solid var(--hairline-strong);border-radius:8px;box-shadow:var(--shadow-md);padding:10px 12px;pointer-events:none;z-index:5;}
+.ap-tip{position:absolute;width:300px;background:var(--paper);border:1px solid var(--hairline-strong);border-radius:8px;box-shadow:var(--shadow-md);padding:10px 12px;pointer-events:none;z-index:5;}
 .ap-tip-head{font-family:var(--font-heading);font-weight:700;font-size:0.82rem;margin-bottom:6px;}
 .ap-tip-row{display:flex;align-items:center;gap:7px;font-size:0.78rem;padding:2px 0;}
 .ap-tip-name{flex:1;color:var(--n700);}

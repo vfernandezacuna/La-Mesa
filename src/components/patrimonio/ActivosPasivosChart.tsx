@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export type SerieKey = "activos" | "inmueble" | "inversion" | "retiro" | "pasivos";
+export type SerieKey = "activos" | "inmueble" | "efectivoInv" | "retiro" | "pasivos";
 
 export interface ChartRow {
   id: string;
@@ -13,12 +13,18 @@ export interface ChartRow {
 // Activos totales va en tinta (neutro, más grueso) y pasivos en línea
 // punteada; los tres componentes usan los tres primeros slots de la paleta
 // categórica, validados todos-contra-todos (las líneas se cruzan).
-const SERIES: { key: SerieKey; name: string; color: string; width: number; dash?: string }[] = [
+const SERIES: { key: SerieKey; name: string; short?: string; color: string; width: number; dash?: string }[] = [
   { key: "activos", name: "Activos totales", color: "#1D1D1D", width: 2.75 },
   { key: "inmueble", name: "Inmuebles", color: "#2a78d6", width: 2 },
-  { key: "inversion", name: "Inversiones financieras", color: "#eb6834", width: 2 },
-  { key: "retiro", name: "Fondos de retiro", color: "#1baf7a", width: 2 },
-  { key: "pasivos", name: "Pasivos", color: "#4a3aa7", width: 2, dash: "7 5" },
+  {
+    key: "efectivoInv",
+    name: "Efectivo e Inversiones Financieras CP & LP",
+    short: "Efectivo e Inv. CP & LP",
+    color: "#eb6834",
+    width: 2,
+  },
+  { key: "retiro", name: "Inversiones Retiro", color: "#1baf7a", width: 2 },
+  { key: "pasivos", name: "Pasivos Totales", color: "#4a3aa7", width: 2, dash: "7 5" },
 ];
 
 const H = 300;
@@ -70,7 +76,7 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
 
   const n = rows.length;
   const showLabels = w >= 560;
-  const right = showLabels ? 150 : 14;
+  const right = showLabels ? 176 : 14;
   const plotW = Math.max(120, w - LEFT - right);
   const plotH = H - TOP - BOTTOM;
 
@@ -104,12 +110,14 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
   }
 
   const hx = hover !== null ? x(hover) : 0;
-  const tipLeft = hover !== null ? (hx + 14 + 230 > w ? hx - 14 - 230 : hx + 14) : 0;
+  const tipW = Math.min(300, w);
+  const tipLeft =
+    hover !== null ? Math.max(0, Math.min(w - tipW, hx + 14 + tipW > w ? hx - 14 - tipW : hx + 14)) : 0;
 
   return (
     <>
       <div className="ap-headline">
-        Desde {first.label}: activos <b>{crecimiento(first.values.activos, last.values.activos)}</b> · pasivos{" "}
+        Desde {first.label}: activos <b>{crecimiento(first.values.activos, last.values.activos)}</b> · pasivos totales{" "}
         <b>{crecimiento(first.values.pasivos, last.values.pasivos)}</b>
       </div>
 
@@ -189,7 +197,7 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
                   strokeDasharray={l.dash ? "4 3" : undefined}
                 />
                 <text x={LEFT + plotW + 27} y={l.y + 4} className="ap-end">
-                  {l.name}
+                  {l.short ?? l.name}
                 </text>
               </g>
             ))}
@@ -207,7 +215,7 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
         </svg>
 
         {hover !== null && (
-          <div className="ap-tip" style={{ left: tipLeft, top: TOP }}>
+          <div className="ap-tip" style={{ left: tipLeft, top: TOP, width: tipW }}>
             <div className="ap-tip-head">{rows[hover].label}</div>
             {SERIES.map((s) => (
               <div className="ap-tip-row" key={s.key}>
