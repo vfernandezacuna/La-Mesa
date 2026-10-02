@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export type SerieKey = "activos" | "inmueble" | "efectivoInv" | "retiro" | "pasivos";
+export type SerieKey = "activos" | "pasivos" | "inmobiliaria" | "financiera";
 
 export interface ChartRow {
   id: string;
@@ -10,21 +10,22 @@ export interface ChartRow {
   values: Record<SerieKey, number>;
 }
 
-// Activos totales va en tinta (neutro, más grueso) y pasivos en línea
-// punteada; los tres componentes usan los tres primeros slots de la paleta
-// categórica, validados todos-contra-todos (las líneas se cruzan).
-const SERIES: { key: SerieKey; name: string; short?: string; color: string; width: number; dash?: string }[] = [
-  { key: "activos", name: "Activos totales", color: "#1D1D1D", width: 2.75 },
-  { key: "inmueble", name: "Inmuebles", color: "#2a78d6", width: 2 },
-  {
-    key: "efectivoInv",
-    name: "Efectivo e Inversiones Financieras CP & LP",
-    short: "Efectivo e Inv. CP & LP",
-    color: "#eb6834",
-    width: 2,
-  },
-  { key: "retiro", name: "Inversiones Retiro", color: "#1baf7a", width: 2 },
-  { key: "pasivos", name: "Pasivos Totales", color: "#4a3aa7", width: 2, dash: "7 5" },
+interface Serie {
+  key: SerieKey;
+  name: string;
+  color: string;
+  width: number;
+  dash?: string;
+}
+
+// Activos y pasivos totales son las dos líneas fuertes; inmobiliaria y
+// financiera van punteadas como secundarias. Los cuatro colores pasan la
+// validación todos-contra-todos (incluida visión de colores alterada).
+const SERIES: Serie[] = [
+  { key: "activos", name: "Activos totales", color: "#008300", width: 3.25 },
+  { key: "pasivos", name: "Pasivos totales", color: "#4a3aa7", width: 3.25 },
+  { key: "inmobiliaria", name: "Inversión Inmobiliaria", color: "#2a78d6", width: 1.75, dash: "6 4" },
+  { key: "financiera", name: "Inversión Financiera", color: "#eda100", width: 1.75, dash: "6 4" },
 ];
 
 const H = 300;
@@ -76,7 +77,7 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
 
   const n = rows.length;
   const showLabels = w >= 560;
-  const right = showLabels ? 176 : 14;
+  const right = showLabels ? 170 : 14;
   const plotW = Math.max(120, w - LEFT - right);
   const plotH = H - TOP - BOTTOM;
 
@@ -101,6 +102,26 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
 
   const first = rows[0];
   const last = rows[n - 1];
+  const neto = (r: ChartRow) => r.values.activos - r.values.pasivos;
+
+  // Banda entre activos y pasivos = patrimonio neto.
+  const banda =
+    rows.map((r, i) => `${x(i)},${y(r.values.activos)}`).join(" ") +
+    " " +
+    [...rows]
+      .map((r, i) => ({ r, i }))
+      .reverse()
+      .map(({ r, i }) => `${x(i)},${y(r.values.pasivos)}`)
+      .join(" ");
+  const iBanda = Math.max(0, Math.round((n - 1) * 0.7));
+  const yAct = y(rows[iBanda].values.activos);
+  const yPas = y(rows[iBanda].values.pasivos);
+  const ySec = SERIES.filter((s) => s.dash).map((s) => y(rows[iBanda].values[s.key]));
+  // Rótulo de la banda donde no pise una línea secundaria.
+  const yBanda = [yAct + 18, yPas - 10, (yAct + yPas) / 2].find(
+    (c) => c > yAct + 12 && c < yPas - 4 && ySec.every((ys) => Math.abs(ys - (c - 4)) > 11),
+  );
+  const bandaVisible = showLabels && yBanda !== undefined;
 
   function onMove(e: React.PointerEvent<SVGRectElement>) {
     const box = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
@@ -117,8 +138,9 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
   return (
     <>
       <div className="ap-headline">
-        Desde {first.label}: activos <b>{crecimiento(first.values.activos, last.values.activos)}</b> · pasivos totales{" "}
-        <b>{crecimiento(first.values.pasivos, last.values.pasivos)}</b>
+        Desde {first.label}: activos <b>{crecimiento(first.values.activos, last.values.activos)}</b> · pasivos{" "}
+        <b>{crecimiento(first.values.pasivos, last.values.pasivos)}</b> · patrimonio neto{" "}
+        <b>{crecimiento(neto(first), neto(last))}</b>
       </div>
 
       <div className="ap-legend">
@@ -128,6 +150,10 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
             {s.name}
           </span>
         ))}
+        <span className="ap-leg">
+          <span className="ap-band-swatch" aria-hidden="true" />
+          Patrimonio neto
+        </span>
       </div>
 
       <div className="ap-wrap" ref={wrapRef}>
@@ -154,9 +180,16 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
             ) : null,
           )}
 
+          <polygon points={banda} fill="#008300" opacity={0.08} />
+          {bandaVisible && (
+            <text x={x(iBanda)} y={yBanda} textAnchor="middle" className="ap-band-lbl">
+              Patrimonio neto
+            </text>
+          )}
+
           {hover !== null && <line x1={hx} x2={hx} y1={TOP} y2={TOP + plotH} className="ap-cross" />}
 
-          {SERIES.map((s) => (
+          {[...SERIES].reverse().map((s) => (
             <polyline
               key={s.key}
               points={rows.map((r, i) => `${x(i)},${y(r.values[s.key])}`).join(" ")}
@@ -176,7 +209,7 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
                 key={s.key}
                 cx={x(i)}
                 cy={y(rows[i].values[s.key])}
-                r={4.5}
+                r={s.dash ? 3.5 : 5}
                 fill={s.color}
                 stroke="var(--paper)"
                 strokeWidth={2}
@@ -197,7 +230,7 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
                   strokeDasharray={l.dash ? "4 3" : undefined}
                 />
                 <text x={LEFT + plotW + 27} y={l.y + 4} className="ap-end">
-                  {l.short ?? l.name}
+                  {l.name}
                 </text>
               </g>
             ))}
@@ -217,6 +250,11 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
         {hover !== null && (
           <div className="ap-tip" style={{ left: tipLeft, top: TOP, width: tipW }}>
             <div className="ap-tip-head">{rows[hover].label}</div>
+            <div className="ap-tip-row ap-tip-neto">
+              <span className="ap-band-swatch" aria-hidden="true" />
+              <span className="ap-tip-name">Patrimonio neto</span>
+              <span className="ap-tip-val">{mm(neto(rows[hover]))}</span>
+            </div>
             {SERIES.map((s) => (
               <div className="ap-tip-row" key={s.key}>
                 <LegendSwatch color={s.color} width={s.width} dash={s.dash} />
@@ -238,6 +276,7 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
                 {SERIES.map((s) => (
                   <th key={s.key}>{s.name}</th>
                 ))}
+                <th>Patrimonio neto</th>
               </tr>
             </thead>
             <tbody>
@@ -247,6 +286,7 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
                   {SERIES.map((s) => (
                     <td key={s.key}>{mm(r.values[s.key])}</td>
                   ))}
+                  <td>{mm(neto(r))}</td>
                 </tr>
               ))}
             </tbody>

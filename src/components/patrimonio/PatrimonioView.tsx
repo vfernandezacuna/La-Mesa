@@ -339,10 +339,9 @@ export default function PatrimonioView({
       label: `${r.quarter} '${String(r.year).slice(2)}`,
       values: {
         activos: t.activos,
-        inmueble: r.totals.inmueble ?? 0,
-        efectivoInv: (r.totals.corrientes ?? 0) + (r.totals.inversion ?? 0),
-        retiro: r.totals.retiro ?? 0,
         pasivos: t.deudas,
+        inmobiliaria: r.totals.inmueble ?? 0,
+        financiera: (r.totals.inversion ?? 0) + (r.totals.retiro ?? 0),
       },
     };
   });
@@ -485,8 +484,8 @@ export default function PatrimonioView({
         <div className="panel">
           <h2>Activos vs. pasivos</h2>
           <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
-            Cómo crecen tus activos — inmuebles, efectivo e inversiones financieras, e inversiones de retiro — frente a tus pasivos totales,
-            trimestre a trimestre.
+            Activos totales frente a pasivos totales — la brecha entre ambos es tu patrimonio neto —, y de fondo
+            cómo se reparte la inversión entre inmobiliaria y financiera (inversiones + retiro).
           </div>
           <ActivosPasivosChart rows={lineRows} />
         </div>
