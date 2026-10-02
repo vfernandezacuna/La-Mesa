@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWeb } from "@/lib/claude-client";
 import {
@@ -82,23 +83,30 @@ export default function PatrimonioView({
   const [indicators, setIndicators] = useState<MarketIndicatorsCache | null>(initialIndicators);
   const [fxFallo, setFxFallo] = useState(false);
 
+  const [fxLoading, setFxLoading] = useState(false);
+
+  // Pide a Claude (con búsqueda web) la UF y el dólar observado de hoy y los
+  // deja en la caché del día, reemplazando lo que hubiera.
+  async function fetchIndicadores(): Promise<MarketIndicatorsCache | null> {
+    const raw = await askClaudeWeb(
+      indicadoresDelDiaSystemPrompt(),
+      `Fecha de hoy: ${todayStr()}. Dame el valor de la UF y del dólar observado de hoy en Chile.`,
+      400,
+    );
+    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { uf?: number; usd?: number };
+    if (!parsed.uf || !parsed.usd) return null;
+    const row = { as_of: todayStr(), uf: parsed.uf, dolar: parsed.usd, fetched_at: new Date().toISOString() };
+    await supabase.from("market_indicators_cache").upsert(row, { onConflict: "user_id,as_of" });
+    return row as MarketIndicatorsCache;
+  }
+
   useEffect(() => {
     const load = async () => {
       if (indicators) return;
       try {
-        const raw = await askClaudeWeb(
-          indicadoresDelDiaSystemPrompt(),
-          `Fecha de hoy: ${todayStr()}. Dame el valor de la UF y del dólar observado de hoy en Chile.`,
-          400,
-        );
-        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { uf?: number; usd?: number };
-        if (parsed.uf && parsed.usd) {
-          const row = { as_of: todayStr(), uf: parsed.uf, dolar: parsed.usd, fetched_at: new Date().toISOString() };
-          await supabase.from("market_indicators_cache").upsert(row, { onConflict: "user_id,as_of" });
-          setIndicators(row as MarketIndicatorsCache);
-        } else {
-          setFxFallo(true);
-        }
+        const row = await fetchIndicadores();
+        if (row) setIndicators(row);
+        else setFxFallo(true);
       } catch {
         setFxFallo(true);
       }
@@ -107,6 +115,19 @@ export default function PatrimonioView({
     // Solo al montar — se cachea por día en market_indicators_cache.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function actualizarIndicadores() {
+    setFxLoading(true);
+    setFxFallo(false);
+    try {
+      const row = await fetchIndicadores();
+      if (row) setIndicators(row);
+      else setFxFallo(true);
+    } catch {
+      setFxFallo(true);
+    }
+    setFxLoading(false);
+  }
 
   // ---------- resumen, trayectoria, composición ----------
   const sorted = useMemo(() => [...quarters].sort((a, b) => qOrden(a) - qOrden(b)), [quarters]);
@@ -117,7 +138,11 @@ export default function PatrimonioView({
   const dNeto = tl && tp ? tl.neto - tp.neto : null;
   const pctD = tl && tp && tp.neto ? (tl.neto / tp.neto - 1) * 100 : null;
 
-  const fxFecha = indicators ? (indicators.as_of === todayStr() ? "hoy" : indicators.as_of) : null;
+  const fxFecha = indicators
+    ? indicators.as_of === todayStr()
+      ? `hoy${indicators.fetched_at ? `, ${new Date(indicators.fetched_at).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}` : ""}`
+      : indicators.as_of
+    : null;
   const fmtNum = (n: number) => Math.round(n).toLocaleString("es-CL");
 
   // ---------- CIO ----------
@@ -387,7 +412,21 @@ export default function PatrimonioView({
                 {fxFallo ? "No se pudo obtener la UF y el dólar de hoy." : "Buscando la UF y el dólar de hoy…"}
               </span>
             )}
+            <button
+              className="ghost btn-icon btn-sm fx-refresh"
+              onClick={() => void actualizarIndicadores()}
+              disabled={fxLoading}
+              title="Consultar la UF y el dólar observado de hoy"
+            >
+              <RefreshCw size={14} aria-hidden="true" className={fxLoading ? "spin" : undefined} />
+              {fxLoading ? "Actualizando…" : "Actualizar"}
+            </button>
           </div>
+          {fxFallo && indicators && (
+            <div className="fx-src" style={{ marginTop: 6 }}>
+              No se pudo actualizar; se muestran los últimos valores obtenidos.
+            </div>
+          )}
           {dNeto !== null && pctD !== null && prev && (
             <div className={`ph-delta ${dNeto >= 0 ? "up" : "down"}`}>
               {dNeto >= 0 ? "▲" : "▼"} {fmtM(Math.abs(dNeto))} ({pctD >= 0 ? "+" : ""}
