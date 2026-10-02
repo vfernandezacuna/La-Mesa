@@ -80,6 +80,7 @@ export default function PatrimonioView({
   const supabase = useMemo(() => createClient(), []);
   const [quarters, setQuarters] = useState<PatrimonioQuarterFull[]>(initialQuarters);
   const [indicators, setIndicators] = useState<MarketIndicatorsCache | null>(initialIndicators);
+  const [fxFallo, setFxFallo] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -95,9 +96,11 @@ export default function PatrimonioView({
           const row = { as_of: todayStr(), uf: parsed.uf, dolar: parsed.usd, fetched_at: new Date().toISOString() };
           await supabase.from("market_indicators_cache").upsert(row, { onConflict: "user_id,as_of" });
           setIndicators(row as MarketIndicatorsCache);
+        } else {
+          setFxFallo(true);
         }
       } catch {
-        // sin indicadores hoy, se omite la equivalencia UF/USD
+        setFxFallo(true);
       }
     };
     void load();
@@ -114,13 +117,8 @@ export default function PatrimonioView({
   const dNeto = tl && tp ? tl.neto - tp.neto : null;
   const pctD = tl && tp && tp.neto ? (tl.neto / tp.neto - 1) * 100 : null;
 
-  function renderEquivalencia(montoCLP: number): string | null {
-    if (!indicators) return null;
-    const uf = montoCLP / indicators.uf;
-    const usd = montoCLP / indicators.dolar;
-    const fecha = indicators.as_of === todayStr() ? "día" : indicators.as_of;
-    return `≈ ${uf.toLocaleString("es-CL", { maximumFractionDigits: 0 })} UF · ≈ US$${usd.toLocaleString("es-CL", { maximumFractionDigits: 0 })} (UF ${indicators.uf.toLocaleString("es-CL")} · USD ${indicators.dolar.toLocaleString("es-CL")} del ${fecha})`;
-  }
+  const fxFecha = indicators ? (indicators.as_of === todayStr() ? "hoy" : indicators.as_of) : null;
+  const fmtNum = (n: number) => Math.round(n).toLocaleString("es-CL");
 
   // ---------- CIO ----------
   const [cioLoading, setCioLoading] = useState(false);
@@ -368,6 +366,28 @@ export default function PatrimonioView({
           <div className="ph-val" title={fmtFull(tl.neto)}>
             {fmtM(tl.neto)}
           </div>
+          <div className="ph-fx">
+            {indicators ? (
+              <>
+                <span className="fx-item">
+                  <span className="fx-l">En UF</span>
+                  <span className="fx-v">{fmtNum(tl.neto / indicators.uf)} UF</span>
+                </span>
+                <span className="fx-item">
+                  <span className="fx-l">En dólares</span>
+                  <span className="fx-v">US$ {fmtNum(tl.neto / indicators.dolar)}</span>
+                </span>
+                <span className="fx-src">
+                  UF ${indicators.uf.toLocaleString("es-CL", { maximumFractionDigits: 2 })} · dólar $
+                  {indicators.dolar.toLocaleString("es-CL", { maximumFractionDigits: 2 })} · valores de {fxFecha}
+                </span>
+              </>
+            ) : (
+              <span className="fx-src">
+                {fxFallo ? "No se pudo obtener la UF y el dólar de hoy." : "Buscando la UF y el dólar de hoy…"}
+              </span>
+            )}
+          </div>
           {dNeto !== null && pctD !== null && prev && (
             <div className={`ph-delta ${dNeto >= 0 ? "up" : "down"}`}>
               {dNeto >= 0 ? "▲" : "▼"} {fmtM(Math.abs(dNeto))} ({pctD >= 0 ? "+" : ""}
@@ -413,7 +433,6 @@ export default function PatrimonioView({
           </div>
         </div>
       )}
-      {last && tl && renderEquivalencia(tl.neto) && <div className="pat-equiv">{renderEquivalencia(tl.neto)}</div>}
 
       <div className="panel">
         <h2>Trayectoria</h2>
