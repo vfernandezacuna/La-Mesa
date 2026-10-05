@@ -44,12 +44,6 @@ function niceStep(max: number, ticks: number): number {
   return m * p;
 }
 
-function crecimiento(a: number, b: number): string {
-  if (!a) return "—";
-  const pct = (b / a - 1) * 100;
-  return `${pct >= 0 ? "+" : ""}${pct.toLocaleString("es-CL", { maximumFractionDigits: 0 })}%`;
-}
-
 function LegendSwatch({ color, width, dash }: { color: string; width: number; dash?: string }) {
   return (
     <svg width="22" height="10" aria-hidden="true">
@@ -102,26 +96,6 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
 
   const first = rows[0];
   const last = rows[n - 1];
-  const neto = (r: ChartRow) => r.values.activos - r.values.pasivos;
-
-  // Banda entre activos y pasivos = patrimonio neto.
-  const banda =
-    rows.map((r, i) => `${x(i)},${y(r.values.activos)}`).join(" ") +
-    " " +
-    [...rows]
-      .map((r, i) => ({ r, i }))
-      .reverse()
-      .map(({ r, i }) => `${x(i)},${y(r.values.pasivos)}`)
-      .join(" ");
-  const iBanda = Math.max(0, Math.round((n - 1) * 0.7));
-  const yAct = y(rows[iBanda].values.activos);
-  const yPas = y(rows[iBanda].values.pasivos);
-  const ySec = SERIES.filter((s) => s.dash).map((s) => y(rows[iBanda].values[s.key]));
-  // Rótulo de la banda donde no pise una línea secundaria.
-  const yBanda = [yAct + 18, yPas - 10, (yAct + yPas) / 2].find(
-    (c) => c > yAct + 12 && c < yPas - 4 && ySec.every((ys) => Math.abs(ys - (c - 4)) > 11),
-  );
-  const bandaVisible = showLabels && yBanda !== undefined;
 
   function onMove(e: React.PointerEvent<SVGRectElement>) {
     const box = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
@@ -137,11 +111,6 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
 
   return (
     <>
-      <div className="ap-headline">
-        Desde {first.label}: activos <b>{crecimiento(first.values.activos, last.values.activos)}</b> · pasivos{" "}
-        <b>{crecimiento(first.values.pasivos, last.values.pasivos)}</b> · patrimonio neto{" "}
-        <b>{crecimiento(neto(first), neto(last))}</b>
-      </div>
 
       <div className="ap-legend">
         {SERIES.map((s) => (
@@ -150,10 +119,6 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
             {s.name}
           </span>
         ))}
-        <span className="ap-leg">
-          <span className="ap-band-swatch" aria-hidden="true" />
-          Patrimonio neto
-        </span>
       </div>
 
       <div className="ap-wrap" ref={wrapRef}>
@@ -180,12 +145,6 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
             ) : null,
           )}
 
-          <polygon points={banda} fill="#008300" opacity={0.08} />
-          {bandaVisible && (
-            <text x={x(iBanda)} y={yBanda} textAnchor="middle" className="ap-band-lbl">
-              Patrimonio neto
-            </text>
-          )}
 
           {hover !== null && <line x1={hx} x2={hx} y1={TOP} y2={TOP + plotH} className="ap-cross" />}
 
@@ -250,11 +209,6 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
         {hover !== null && (
           <div className="ap-tip" style={{ left: tipLeft, top: TOP, width: tipW }}>
             <div className="ap-tip-head">{rows[hover].label}</div>
-            <div className="ap-tip-row ap-tip-neto">
-              <span className="ap-band-swatch" aria-hidden="true" />
-              <span className="ap-tip-name">Patrimonio neto</span>
-              <span className="ap-tip-val">{mm(neto(rows[hover]))}</span>
-            </div>
             {SERIES.map((s) => (
               <div className="ap-tip-row" key={s.key}>
                 <LegendSwatch color={s.color} width={s.width} dash={s.dash} />
@@ -266,7 +220,12 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
         )}
       </div>
 
-      <details className="pat-hist" style={{ marginTop: 14 }}>
+      <div className="ap-disclaimer">
+        <b>Inversión Financiera</b> incluye Activos Corrientes (caja y equivalentes), Activo No Corriente Retiro y
+        Activo No Corriente Inversión. <b>Inversión Inmobiliaria</b> corresponde al valor de los inmuebles.
+      </div>
+
+      <details className="pat-hist" style={{ marginTop: 10 }}>
         <summary>Ver los datos del gráfico</summary>
         <div style={{ overflowX: "auto" }}>
           <table className="pat-table">
@@ -276,7 +235,6 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
                 {SERIES.map((s) => (
                   <th key={s.key}>{s.name}</th>
                 ))}
-                <th>Patrimonio neto</th>
               </tr>
             </thead>
             <tbody>
@@ -286,7 +244,6 @@ export function ActivosPasivosChart({ rows }: { rows: ChartRow[] }) {
                   {SERIES.map((s) => (
                     <td key={s.key}>{mm(r.values[s.key])}</td>
                   ))}
-                  <td>{mm(neto(r))}</td>
                 </tr>
               ))}
             </tbody>

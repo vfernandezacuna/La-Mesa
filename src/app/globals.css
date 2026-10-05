@@ -654,8 +654,10 @@ button.btn-sm{padding:8px 14px;min-height:36px;font-size:0.85rem;}
 @media(max-width:600px){.ev-stats{grid-template-columns:1fr 1fr;}.ev-stat.main{grid-column:1 / -1;}}
 
 /* Patrimonio — activos vs. pasivos */
-.ap-headline{font-size:0.9rem;color:var(--n700);margin-bottom:12px;}
-.ap-headline b{color:var(--ink);font-family:var(--font-heading);}
+.tr-cagr{display:inline-flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--hairline);border-left:3px solid var(--accent-deep);border-radius:10px;padding:12px 16px;margin-bottom:18px;}
+.tr-cagr .ev-v{font-size:1.9rem;}
+.ap-disclaimer{font-size:0.78rem;line-height:1.5;color:var(--n700);margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline);}
+.ap-disclaimer b{color:var(--ink);font-weight:600;}
 .ap-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:10px;font-size:0.78rem;color:var(--n700);}
 .ap-leg{display:inline-flex;align-items:center;gap:7px;}
 .ap-wrap{position:relative;width:100%;}
@@ -664,9 +666,6 @@ button.btn-sm{padding:8px 14px;min-height:36px;font-size:0.85rem;}
 .ap-tick{font-family:var(--mono);font-size:11px;fill:var(--n600);}
 .ap-end{font-family:var(--font-body);font-size:12px;fill:var(--n700);}
 .ap-cross{stroke:var(--n500);stroke-width:1;}
-.ap-band-swatch{display:inline-block;width:22px;height:10px;border-radius:2px;background:rgba(0,131,0,.14);}
-.ap-band-lbl{font-family:var(--font-body);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;fill:var(--n700);stroke:var(--paper);stroke-width:4px;stroke-linejoin:round;paint-order:stroke;}
-.ap-tip-neto{padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid var(--hairline);}
 .ap-tip{position:absolute;width:300px;background:var(--paper);border:1px solid var(--hairline-strong);border-radius:8px;box-shadow:var(--shadow-md);padding:10px 12px;pointer-events:none;z-index:5;}
 .ap-tip-head{font-family:var(--font-heading);font-weight:700;font-size:0.82rem;margin-bottom:6px;}
 .ap-tip-row{display:flex;align-items:center;gap:7px;font-size:0.78rem;padding:2px 0;}

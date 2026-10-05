@@ -355,6 +355,14 @@ export default function PatrimonioView({
   const chartSerie = sorted.slice(-14);
   const chartNetos = chartSerie.map((r) => totalesDe(r).neto);
   const chartMax = Math.max(...chartNetos, 1);
+
+  // CAGR del patrimonio neto desde el primer trimestre cargado (cierre de
+  // trimestre a cierre de trimestre).
+  const primero = sorted[0] ?? null;
+  const netoPrimero = primero ? totalesDe(primero).neto : 0;
+  const aniosTray = primero && last ? (qOrden(last) - qOrden(primero) - 6 * (last.year - primero.year)) / 4 : 0;
+  const cagrNeto =
+    tl && aniosTray > 0 && netoPrimero > 0 && tl.neto > 0 ? Math.pow(tl.neto / netoPrimero, 1 / aniosTray) - 1 : null;
   const lineRows: ChartRow[] = sorted.map((r) => {
     const t = totalesDe(r);
     return {
@@ -364,7 +372,7 @@ export default function PatrimonioView({
         activos: t.activos,
         pasivos: t.deudas,
         inmobiliaria: r.totals.inmueble ?? 0,
-        financiera: (r.totals.inversion ?? 0) + (r.totals.retiro ?? 0),
+        financiera: (r.totals.corrientes ?? 0) + (r.totals.inversion ?? 0) + (r.totals.retiro ?? 0),
       },
     };
   });
@@ -479,6 +487,22 @@ export default function PatrimonioView({
           <div className="empty-note">Aún no has cargado tu planilla. Súbela abajo y aparece todo.</div>
         ) : (
           <>
+            {cagrNeto !== null && primero && last && (
+              <div className="tr-cagr">
+                <span className="ev-l">
+                  CAGR del patrimonio neto · desde {primero.quarter} {primero.year}
+                </span>
+                <span className="ev-v">
+                  {cagrNeto >= 0 ? "+" : ""}
+                  {(cagrNeto * 100).toLocaleString("es-CL", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+                </span>
+                <span className="ev-s">
+                  anual compuesto · de {fmtM(netoPrimero)} ({primero.quarter} {primero.year}) a {fmtM(tl!.neto)} (
+                  {last.quarter} {last.year}), en{" "}
+                  {aniosTray.toLocaleString("es-CL", { maximumFractionDigits: 2 })} años
+                </span>
+              </div>
+            )}
             <div className="pat-bars">
               {chartSerie.map((r, i) => {
                 const n = chartNetos[i];
@@ -542,8 +566,8 @@ export default function PatrimonioView({
         <div className="panel">
           <h2>Activos vs. pasivos</h2>
           <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
-            Activos totales frente a pasivos totales — la brecha entre ambos es tu patrimonio neto —, y de fondo
-            cómo se reparte la inversión entre inmobiliaria y financiera (inversiones + retiro).
+            Activos totales frente a pasivos totales y, de fondo, la evolución de la inversión inmobiliaria y la
+            inversión financiera, trimestre a trimestre.
           </div>
           <ActivosPasivosChart rows={lineRows} />
         </div>
