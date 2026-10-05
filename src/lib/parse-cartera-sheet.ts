@@ -29,7 +29,7 @@ function cell(rows: string[][], r: number, c: number): string {
   return (rows[r]?.[c] ?? "").trim();
 }
 
-function parseCLNumber(raw: string): number {
+export function parseCLNumber(raw: string): number {
   const s = raw.trim();
   if (!s || s === "-") return 0;
   const isPercent = s.endsWith("%");

@@ -494,6 +494,10 @@ table.data td{padding:10px 10px 10px 0;border-bottom:1px solid var(--hairline);f
 /* Patrimonio — resumen, ecuación patrimonial y ratios */
 .pat-hero{border:1px solid var(--hairline);border-top:3px solid var(--accent-deep);border-radius:8px;padding:28px 30px;background:var(--surface);margin:24px 0 32px;box-shadow:var(--shadow-md);}
 .ph-lbl{font-size:0.75rem;text-transform:uppercase;letter-spacing:1.4px;color:var(--n700);font-weight:600;margin-bottom:10px;}
+.ph-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.ph-head button{margin-top:-6px;}
+.ph-sync{margin-top:12px;font-size:0.8rem;color:var(--verde-deep);background:var(--verde-tint);border-radius:8px;padding:8px 12px;}
+.ph-sync.err{color:#8a2a2a;background:#fbecec;}
 .ph-val{font-family:var(--font-display);font-size:3.4rem;font-weight:600;line-height:1.1;color:var(--accent-deep);letter-spacing:-.01em;}
 .ph-delta{font-family:var(--mono);font-size:0.9rem;margin-top:10px;}
 .ph-fx{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px 26px;margin-top:12px;}
@@ -501,7 +505,6 @@ table.data td{padding:10px 10px 10px 0;border-bottom:1px solid var(--hairline);f
 .fx-l{font-size:0.62rem;text-transform:uppercase;letter-spacing:1.1px;color:var(--n600);font-weight:600;}
 .fx-v{font-family:var(--font-display);font-size:1.35rem;font-weight:600;color:var(--ink);line-height:1.2;}
 .fx-src{font-family:var(--mono);font-size:0.72rem;color:var(--n600);padding-bottom:3px;}
-button.fx-refresh{margin-left:auto;align-self:center;}
 .spin{animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .ph-delta.up{color:var(--accent-deep);}

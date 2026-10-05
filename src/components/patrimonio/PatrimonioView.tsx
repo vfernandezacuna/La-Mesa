@@ -11,7 +11,7 @@ import {
 } from "@/lib/prompts";
 import { appendProfile, buildAdvisorContext, buildTaskContext, type CarteraContextEntry } from "@/lib/context";
 import { todayStr } from "@/lib/date";
-import type { PatrimonioQuarterFull } from "@/app/(app)/patrimonio/page";
+import type { PatrimonioQuarterFull } from "@/lib/fetch-patrimonio";
 import type { MarketIndicatorsCache, PatrimonioClassCode, PatrimonioLineItem, Task, WeeklyReview } from "@/lib/types";
 import { ActivosPasivosChart, type ChartRow } from "./ActivosPasivosChart";
 
@@ -83,7 +83,6 @@ export default function PatrimonioView({
   const [indicators, setIndicators] = useState<MarketIndicatorsCache | null>(initialIndicators);
   const [fxFallo, setFxFallo] = useState(false);
 
-  const [fxLoading, setFxLoading] = useState(false);
 
   // Pide a Claude (con búsqueda web) la UF y el dólar observado de hoy y los
   // deja en la caché del día, reemplazando lo que hubiera.
@@ -116,8 +115,45 @@ export default function PatrimonioView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---------- actualizar desde Google Sheets ----------
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  async function sincronizarPlanilla() {
+    try {
+      const res = await fetch("/api/patrimonio/sync", { method: "POST" });
+      const data = (await res.json()) as {
+        error?: string;
+        leidos?: number;
+        nuevos?: string[];
+        actualizados?: string[];
+        avisos?: string[];
+        quarters?: PatrimonioQuarterFull[];
+      };
+      if (!res.ok) throw new Error(data.error ?? "No se pudo leer la planilla.");
+      if (data.quarters) setQuarters(data.quarters);
+      const partes: string[] = [];
+      if (data.nuevos?.length) partes.push(`nuevo${data.nuevos.length > 1 ? "s" : ""}: ${data.nuevos.join(", ")}`);
+      if (data.actualizados?.length) partes.push(`con cambios: ${data.actualizados.join(", ")}`);
+      setSyncMsg(
+        `Planilla al día — ${data.leidos} trimestres leídos${partes.length ? ` · ${partes.join(" · ")}` : ", sin cambios"}.` +
+          (data.avisos?.length ? ` Ojo: ${data.avisos.join(" ")}` : ""),
+      );
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "No se pudo leer la planilla.");
+    }
+  }
+
+  async function actualizarTodo() {
+    setSyncLoading(true);
+    setSyncMsg(null);
+    setSyncError(null);
+    await Promise.all([sincronizarPlanilla(), actualizarIndicadores()]);
+    setSyncLoading(false);
+  }
+
   async function actualizarIndicadores() {
-    setFxLoading(true);
     setFxFallo(false);
     try {
       const row = await fetchIndicadores();
@@ -126,7 +162,6 @@ export default function PatrimonioView({
     } catch {
       setFxFallo(true);
     }
-    setFxLoading(false);
   }
 
   // ---------- resumen, trayectoria, composición ----------
@@ -393,8 +428,19 @@ export default function PatrimonioView({
 
       {last && tl && (
         <div className="pat-hero">
-          <div className="ph-lbl">
-            Patrimonio neto · {last.quarter} {last.year}
+          <div className="ph-head">
+            <div className="ph-lbl">
+              Patrimonio neto · {last.quarter} {last.year}
+            </div>
+            <button
+              className="ghost btn-icon btn-sm"
+              onClick={() => void actualizarTodo()}
+              disabled={syncLoading}
+              title="Traer la planilla de Google Sheets y la UF y el dólar observado de hoy"
+            >
+              <RefreshCw size={14} aria-hidden="true" className={syncLoading ? "spin" : undefined} />
+              {syncLoading ? "Actualizando…" : "Actualizar"}
+            </button>
           </div>
           <div className="ph-val" title={fmtFull(tl.neto)}>
             {fmtM(tl.neto)}
@@ -420,20 +466,14 @@ export default function PatrimonioView({
                 {fxFallo ? "No se pudo obtener la UF y el dólar de hoy." : "Buscando la UF y el dólar de hoy…"}
               </span>
             )}
-            <button
-              className="ghost btn-icon btn-sm fx-refresh"
-              onClick={() => void actualizarIndicadores()}
-              disabled={fxLoading}
-              title="Consultar la UF y el dólar observado de hoy"
-            >
-              <RefreshCw size={14} aria-hidden="true" className={fxLoading ? "spin" : undefined} />
-              {fxLoading ? "Actualizando…" : "Actualizar"}
-            </button>
           </div>
           {fxFallo && indicators && (
             <div className="fx-src" style={{ marginTop: 6 }}>
-              No se pudo actualizar; se muestran los últimos valores obtenidos.
+              No se pudo actualizar la UF y el dólar; se muestran los últimos valores obtenidos.
             </div>
+          )}
+          {(syncMsg || syncError) && (
+            <div className={`ph-sync ${syncError ? "err" : ""}`}>{syncError ?? syncMsg}</div>
           )}
           {dNeto !== null && pctD !== null && prev && (
             <div className={`ph-delta ${dNeto >= 0 ? "up" : "down"}`}>
@@ -484,7 +524,14 @@ export default function PatrimonioView({
       <div className="panel">
         <h2>Trayectoria</h2>
         {!quarters.length ? (
-          <div className="empty-note">Aún no has cargado tu planilla. Súbela abajo y aparece todo.</div>
+          <div className="empty-note">
+            Aún no hay trimestres cargados.{" "}
+            <button className="ghost btn-icon btn-sm" onClick={() => void actualizarTodo()} disabled={syncLoading}>
+              <RefreshCw size={14} aria-hidden="true" className={syncLoading ? "spin" : undefined} />
+              {syncLoading ? "Trayendo la planilla…" : "Traer desde Google Sheets"}
+            </button>
+            {syncError && <div style={{ marginTop: 8 }}>{syncError}</div>}
+          </div>
         ) : (
           <>
             {cagrNeto !== null && primero && last && (
@@ -706,11 +753,11 @@ export default function PatrimonioView({
         )}
       </div>
 
-      <div className="panel">
-        <h2>Cargar desde tu planilla</h2>
-        <div className="page-sub" style={{ margin: "-6px 0 14px 0" }}>
-          Sube tu <em>Patrimonio_Familiar.xlsx</em> tal cual — leo la hoja Balance completa, todos los años y trimestres.
-          Súbelo de nuevo cada cierre y se actualiza solo.
+      <details className="pat-manual" open={!quarters.length || undefined}>
+        <summary>Cargar la planilla a mano (archivo o pegado)</summary>
+        <div className="page-sub" style={{ margin: "8px 0 12px 0", fontSize: "0.82rem" }}>
+          Normalmente no lo necesitas: el botón <b>Actualizar</b> del resumen trae la planilla de Google Sheets. Úsalo
+          solo si quieres cargar un archivo <em>.xlsx</em> o pegar un rango.
         </div>
         <div className="pdf-drop">
           <div className="pdf-drop-lbl">Arrastra o elige tu planilla de patrimonio (.xlsx o .csv)</div>
@@ -806,7 +853,7 @@ export default function PatrimonioView({
             </div>
           </div>
         )}
-      </div>
+      </details>
 
       <details className="pat-manual">
         <summary>Corregir o agregar un trimestre a mano</summary>

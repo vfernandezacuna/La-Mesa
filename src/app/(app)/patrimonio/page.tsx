@@ -2,52 +2,21 @@ import { createClient } from "@/lib/supabase/server";
 import PatrimonioView from "@/components/patrimonio/PatrimonioView";
 import { todayStr } from "@/lib/date";
 import { fetchCarteraEntries } from "@/lib/fetch-carteras";
-import type { PatrimonioQuarterTotals } from "@/lib/context";
-import type {
-  MarketIndicatorsCache,
-  PatrimonioClassCode,
-  PatrimonioClassTotal,
-  PatrimonioLineItem,
-  PatrimonioQuarter,
-  Task,
-  WeeklyReview,
-} from "@/lib/types";
-
-export interface PatrimonioQuarterFull extends PatrimonioQuarterTotals {
-  id: string;
-  lineItems: PatrimonioLineItem[];
-}
+import { fetchPatrimonioQuarters } from "@/lib/fetch-patrimonio";
+import type { MarketIndicatorsCache, Task, WeeklyReview } from "@/lib/types";
 
 export default async function PatrimonioPage() {
   const supabase = await createClient();
 
-  const [tasksRes, profileRes, reviewsRes, quartersRes, lineItemsRes, carteras, indicatorsRes] =
+  const [tasksRes, profileRes, reviewsRes, quarters, carteras, indicatorsRes] =
     await Promise.all([
       supabase.from("tasks").select("*"),
       supabase.from("profile").select("content").maybeSingle(),
       supabase.from("weekly_reviews").select("*").order("week_key", { ascending: true }),
-      supabase
-        .from("patrimonio_quarters")
-        .select("*, patrimonio_class_totals(*)")
-        .order("year", { ascending: true })
-        .order("quarter", { ascending: true }),
-      supabase.from("patrimonio_line_items").select("*"),
+      fetchPatrimonioQuarters(supabase),
       fetchCarteraEntries(supabase),
       supabase.from("market_indicators_cache").select("*").eq("as_of", todayStr()).maybeSingle(),
     ]);
-
-  const lineItems = (lineItemsRes.data as PatrimonioLineItem[]) ?? [];
-  const quarters: PatrimonioQuarterFull[] = (
-    (quartersRes.data as (PatrimonioQuarter & { patrimonio_class_totals: PatrimonioClassTotal[] })[]) ?? []
-  ).map((q) => ({
-    id: q.id,
-    year: q.year,
-    quarter: q.quarter,
-    totals: Object.fromEntries(q.patrimonio_class_totals.map((t) => [t.class_code, t.amount])) as Partial<
-      Record<PatrimonioClassCode, number>
-    >,
-    lineItems: lineItems.filter((li) => li.quarter_id === q.id),
-  }));
 
   return (
     <PatrimonioView
