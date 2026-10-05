@@ -156,9 +156,10 @@ function PortfolioBlock({
         carteraTexto(portfolio.name, portfolio.descripcion, portfolio.meta, portfolio.positions, true) +
           buildContext(),
       );
+      if (!raw.trim()) throw new Error("Claude respondió vacío.");
       setCioResult(raw.trim());
-    } catch {
-      setCioError("No se pudo generar el análisis.");
+    } catch (err) {
+      setCioError(`No se pudo generar el análisis. ${err instanceof Error ? err.message : ""}`.trim());
     }
     setCioLoading(false);
   }
