@@ -3,13 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { askClaude, askClaudeWeb } from "@/lib/claude-client";
+import { askClaude, askClaudeWeb, obtenerIndicadores } from "@/lib/claude-client";
 import {
   carteraAnalysisSystemPrompt,
   briefingMercadoSystemPrompt,
   resumenNoticiasSystemPrompt,
   ideasInvestigarSystemPrompt,
-  indicadoresDelDiaSystemPrompt,
 } from "@/lib/prompts";
 import {
   appendProfile,
@@ -343,17 +342,7 @@ export default function InversionesView({
     const load = async () => {
       if (indicators) return;
       try {
-        const raw = await askClaudeWeb(
-          indicadoresDelDiaSystemPrompt(),
-          `Fecha de hoy: ${todayStr()}. Dame el valor de la UF y del dólar observado de hoy en Chile.`,
-          400,
-        );
-        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { uf?: number; usd?: number };
-        if (parsed.uf && parsed.usd) {
-          const row = { as_of: todayStr(), uf: parsed.uf, dolar: parsed.usd, fetched_at: new Date().toISOString() };
-          await supabase.from("market_indicators_cache").upsert(row, { onConflict: "user_id,as_of" });
-          setIndicators(row as MarketIndicatorsCache);
-        }
+        setIndicators((await obtenerIndicadores(todayStr())) as MarketIndicatorsCache);
       } catch {
         // sin indicadores hoy, se omite la equivalencia UF/USD
       }

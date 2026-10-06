@@ -36,18 +36,27 @@ async function postClaude(body: Record<string, unknown>): Promise<string> {
     .join("\n");
 }
 
-export async function askClaude(system: string, user: string, maxTokens = 1200): Promise<string> {
-  return postClaude({ system, messages: [{ role: "user", content: user }], maxTokens });
+// "low" para tareas mecánicas (extraer, transcribir, clasificar): menos
+// tokens y más rápido. Sin indicar, el servidor usa "medium".
+export type Effort = "low" | "medium" | "high";
+
+export async function askClaude(system: string, user: string, maxTokens = 1200, effort?: Effort): Promise<string> {
+  return postClaude({ system, messages: [{ role: "user", content: user }], maxTokens, effort });
 }
 
-// Variante con búsqueda web — usada para indicadores del día (UF/dólar) y
-// para los briefings de mercado que necesitan datos actuales.
-export async function askClaudeWeb(system: string, user: string, maxTokens = 2000): Promise<string> {
+// Variante con búsqueda web — para briefings e ideas que necesitan datos
+// actuales. Cada búsqueda se cobra aparte, así que va con tope.
+export async function askClaudeWeb(
+  system: string,
+  user: string,
+  maxTokens = 2000,
+  maxSearches = 5,
+): Promise<string> {
   return postClaude({
     system,
     messages: [{ role: "user", content: user }],
     maxTokens,
-    tools: [{ type: "web_search_20260209", name: "web_search" }],
+    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: maxSearches }],
   });
 }
 
@@ -71,6 +80,7 @@ export async function askClaudeWithPdf(
       },
     ],
     maxTokens,
+    effort: "low",
   });
 }
 
@@ -91,5 +101,21 @@ export async function askClaudeWithFile(
     system,
     messages: [{ role: "user", content: [fileBlock, { type: "text", text: userText }] }],
     maxTokens,
+    effort: "low",
   });
+}
+
+// UF y dólar observado del día: el servidor usa lo guardado del día, si no la
+// fuente oficial gratuita, y solo como respaldo a Claude. `refresh` fuerza
+// volver a consultarlos.
+export async function obtenerIndicadores(fecha: string, refresh = false): Promise<{
+  as_of: string;
+  uf: number;
+  dolar: number;
+  fetched_at: string;
+}> {
+  const res = await fetch(`/api/indicadores?fecha=${fecha}${refresh ? "&refresh=1" : ""}`);
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.uf) throw new Error(data?.error ?? "No se pudieron obtener los indicadores.");
+  return data;
 }

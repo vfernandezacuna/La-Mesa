@@ -320,7 +320,7 @@ export default function CriticalTopicsView({
     setStatusLoading(true);
     try {
       const tItems = items.filter((i) => i.topic_id === t.id);
-      const user = buildCriticalTopicContext(t.title, allEntries, tItems) + appendProfile("", profile);
+      const user = buildCriticalTopicContext(t.title, allEntries, tItems, t.status_summary) + appendProfile("", profile);
       const raw = await askClaude(criticalTopicStatusSystemPrompt(), user, 1400);
       const { data } = await supabase
         .from("critical_topics")
@@ -352,7 +352,7 @@ export default function CriticalTopicsView({
       const yaPropuestas = pendientes.length
         ? `\n\nTareas ya propuestas (no las repitas):\n${pendientes.map((p) => `- ${p.title}`).join("\n")}`
         : "";
-      const raw = await askClaude(criticalTopicTasksSystemPrompt(today, weekday), text + yaPropuestas, 1200);
+      const raw = await askClaude(criticalTopicTasksSystemPrompt(today, weekday), text + yaPropuestas, 1200, "low");
       const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as ProposedTask[];
       const vistos = new Set(pendientes.map((p) => normTitle(p.title)));
       const rows = (Array.isArray(parsed) ? parsed : [])
@@ -540,7 +540,9 @@ export default function CriticalTopicsView({
             evaluating={proposalsLoading && proposalsHere}
             message={itemsMsg}
             onToggle={(id) => setExpandedItemId((prev) => (prev === id ? null : id))}
-            onEvaluate={() => void proponerAsuntos(topic, buildCriticalTopicContext(topic.title, entries), null, true)}
+            onEvaluate={() =>
+              void proponerAsuntos(topic, buildCriticalTopicContext(topic.title, entries, [], topic.status_summary), null, true)
+            }
             onSave={guardarAsunto}
             onDelete={(it) => void eliminarAsunto(it)}
             onCreate={(name) => void crearAsunto(name)}

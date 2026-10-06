@@ -51,7 +51,7 @@ export default function FocusGrid({
               </button>
             </div>
           ) : (
-            <Link key={`empty-${i}`} href="/revision" className="focus-empty">
+            <Link prefetch={false} key={`empty-${i}`} href="/revision" className="focus-empty">
               <span className="fe-plus">+</span>
               <span>Fíjala en tu revisión semanal</span>
             </Link>

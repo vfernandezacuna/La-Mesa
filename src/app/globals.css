@@ -85,6 +85,11 @@ a:hover{color:var(--azul);}
 .sidebar{width:230px;padding:34px 22px 26px;display:flex;flex-direction:column;flex-shrink:0;}
 .brand{font-family:var(--font-display);font-weight:700;font-size:2rem;letter-spacing:-.005em;color:var(--ink);line-height:1;}
 .brand-sub{font-size:0.62rem;color:var(--n700);text-transform:uppercase;letter-spacing:2px;margin-top:6px;padding-bottom:16px;margin-bottom:22px;border-bottom:2px solid var(--ink);}
+.nav-pending{width:6px;height:6px;border-radius:50%;background:var(--accent-deep);margin-left:auto;opacity:0;flex-shrink:0;}
+.nav-pending.on{opacity:1;animation:navpulse .8s ease-in-out infinite;}
+@keyframes navpulse{50%{opacity:.25;}}
+.tab-item{position:relative;}
+.tab-item .nav-pending{position:absolute;top:5px;right:5px;margin:0;}
 .nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;margin-bottom:2px;border-radius:8px;cursor:pointer;color:var(--n700);font-family:var(--font-heading);font-weight:600;font-size:1rem;transition:.14s;text-decoration:none;box-shadow:inset 0 0 0 0 var(--accent-deep);}
 .nav-item:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 5%,transparent);}
 .nav-item.active{color:var(--accent-deep);background:var(--accent-tint);font-weight:700;box-shadow:inset 3px 0 0 0 var(--accent-deep);}
@@ -221,6 +226,8 @@ button.text-action:hover{background:transparent;color:var(--ink);text-decoration
 /* Coach strip — nota editorial */
 .coach-strip{border-left:2px solid var(--accent-deep);padding:4px 0 4px 16px;margin-bottom:28px;font-family:var(--font-display);font-size:1.2rem;font-style:italic;line-height:1.45;font-weight:500;color:var(--ink);}
 .coach-strip .lbl{font-family:var(--font-body);font-style:normal;font-size:0.62rem;text-transform:uppercase;letter-spacing:1.6px;color:var(--accent-deep);font-weight:600;margin-bottom:7px;}
+button.coach-otra{background:none;border:none;box-shadow:none;padding:0 0 0 10px;min-height:0;font-family:var(--font-body);font-size:0.62rem;font-weight:500;letter-spacing:.04em;text-transform:none;color:var(--n600);text-decoration:underline;text-underline-offset:2px;}
+button.coach-otra:hover{background:none;color:var(--ink);transform:none;box-shadow:none;}
 
 /* Banner revisión semanal */
 .weekly-banner{display:flex;align-items:center;gap:15px;background:var(--accent-tint);border-radius:8px;padding:16px 20px;margin-bottom:28px;cursor:pointer;transition:.14s;border:none;width:100%;text-align:left;font-family:inherit;}

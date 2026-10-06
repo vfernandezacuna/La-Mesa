@@ -143,7 +143,7 @@ export function TareasPorHacer({
         <div className="tp-added">
           <ListChecks size={15} aria-hidden="true" />
           <span>{addedMsg}</span>
-          <Link href="/">Ver en Hoy</Link>
+          <Link prefetch={false} href="/">Ver en Hoy</Link>
         </div>
       )}
       {message && <div className="empty-note" style={{ marginBottom: 10 }}>{message}</div>}

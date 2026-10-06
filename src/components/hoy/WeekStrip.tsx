@@ -23,7 +23,7 @@ export default function WeekStrip({ tasks, now }: { tasks: Task[]; now: Date }) 
           const isPast = (daysUntil(ds) ?? 0) < 0;
           const dayTasks = tasks.filter((t) => !t.done && t.due_date === ds);
           return (
-            <Link
+            <Link prefetch={false}
               key={ds}
               href={`/calendario?date=${ds}`}
               className={`wk-day ${isToday ? "today" : ""} ${isPast ? "past" : ""}`}

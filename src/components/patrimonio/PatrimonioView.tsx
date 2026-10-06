@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { askClaude, askClaudeWeb } from "@/lib/claude-client";
+import { askClaude, obtenerIndicadores } from "@/lib/claude-client";
 import {
   patrimonioAnalysisSystemPrompt,
   patrimonioImportSystemPrompt,
-  indicadoresDelDiaSystemPrompt,
 } from "@/lib/prompts";
 import { appendProfile, buildAdvisorContext, buildTaskContext, type CarteraContextEntry } from "@/lib/context";
 import { todayStr } from "@/lib/date";
@@ -84,19 +83,11 @@ export default function PatrimonioView({
   const [fxFallo, setFxFallo] = useState(false);
 
 
-  // Pide a Claude (con búsqueda web) la UF y el dólar observado de hoy y los
-  // deja en la caché del día, reemplazando lo que hubiera.
-  async function fetchIndicadores(): Promise<MarketIndicatorsCache | null> {
-    const raw = await askClaudeWeb(
-      indicadoresDelDiaSystemPrompt(),
-      `Fecha de hoy: ${todayStr()}. Dame el valor de la UF y del dólar observado de hoy en Chile.`,
-      400,
-    );
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { uf?: number; usd?: number };
-    if (!parsed.uf || !parsed.usd) return null;
-    const row = { as_of: todayStr(), uf: parsed.uf, dolar: parsed.usd, fetched_at: new Date().toISOString() };
-    await supabase.from("market_indicators_cache").upsert(row, { onConflict: "user_id,as_of" });
-    return row as MarketIndicatorsCache;
+  // UF y dólar observado de hoy (ver /api/indicadores): lo guardado del día,
+  // o la fuente oficial gratuita, o Claude como respaldo. `refresh` fuerza
+  // volver a consultarlos.
+  async function fetchIndicadores(refresh = false): Promise<MarketIndicatorsCache | null> {
+    return (await obtenerIndicadores(todayStr(), refresh)) as MarketIndicatorsCache;
   }
 
   useEffect(() => {
@@ -156,7 +147,7 @@ export default function PatrimonioView({
   async function actualizarIndicadores() {
     setFxFallo(false);
     try {
-      const row = await fetchIndicadores();
+      const row = await fetchIndicadores(true);
       if (row) setIndicators(row);
       else setFxFallo(true);
     } catch {
@@ -320,7 +311,12 @@ export default function PatrimonioView({
     setImportDone(null);
     const recorte = texto.length > 28000 ? texto.slice(0, 28000) + "\n[...truncado]" : texto;
     try {
-      const raw = await askClaude(patrimonioImportSystemPrompt(), `Esta es mi planilla de patrimonio:\n\n${recorte}`, 4000);
+      const raw = await askClaude(
+        patrimonioImportSystemPrompt(),
+        `Esta es mi planilla de patrimonio:\n\n${recorte}`,
+        4000,
+        "low",
+      );
       const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { registros?: PendingRegistro[] };
       const regs = (parsed.registros ?? []).filter((r) => r.q && r.year);
       if (!regs.length) {

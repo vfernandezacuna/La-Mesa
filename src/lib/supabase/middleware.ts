@@ -32,10 +32,13 @@ export async function updateSession(request: NextRequest) {
       },
     });
 
-    // No ejecutar lógica entre createServerClient y getUser(): invalidaría la sesión.
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // No ejecutar lógica entre createServerClient y getClaims(): invalidaría la sesión.
+    // getClaims refresca la sesión si venció y valida el token localmente
+    // (sin llamar al servidor de Auth en cada solicitud) cuando el proyecto
+    // usa claves asimétricas; si no, hace la misma validación por red que
+    // getUser.
+    const { data } = await supabase.auth.getClaims();
+    const user = data?.claims?.sub ? data.claims : null;
 
     if (!user && !isLoginRoute) {
       const url = request.nextUrl.clone();

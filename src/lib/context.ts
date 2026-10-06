@@ -422,23 +422,42 @@ export function buildAdvisorContext(scope: "coach" | "consejo" | "cio", data: Ad
 // ---------- Temas críticos ----------
 // Arma el historial cronológico de un tema para pedirle a la IA una lectura
 // de estado o para extraer tareas de la entrada más reciente.
+// Tope de lo que se manda a Claude por tema: el historial crece con cada nota
+// y se reenvía completo en cada llamada. Con más entradas que el tope, se
+// mandan las más recientes y la lectura de estado anterior resume el resto.
+const HISTORIAL_MAX_ENTRADAS = 12;
+const ENTRADA_MAX_CARACTERES = 6000;
+
 export function buildCriticalTopicContext(
   title: string,
   entries: CriticalTopicEntry[],
   items: CriticalTopicItem[] = [],
+  lecturaPrevia?: string | null,
 ): string {
   const sorted = [...entries].sort((a, b) => a.created_at.localeCompare(b.created_at));
-  const lines = sorted.map((e) => {
+  const omitidas = Math.max(0, sorted.length - HISTORIAL_MAX_ENTRADAS);
+  const recientes = sorted.slice(omitidas);
+  const lines = recientes.map((e) => {
     const fecha = new Date(e.created_at).toLocaleDateString("es-CL", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
     const etiqueta = e.kind === "material" ? `Material${e.file_name ? ` (${e.file_name})` : ""}` : "Nota";
-    return `[${fecha} · ${etiqueta}]\n${e.content_text}`;
+    const texto =
+      e.content_text.length > ENTRADA_MAX_CARACTERES
+        ? `${e.content_text.slice(0, ENTRADA_MAX_CARACTERES)}\n[…recortado]`
+        : e.content_text;
+    return `[${fecha} · ${etiqueta}]\n${texto}`;
   });
   const asuntos = items.length ? `\n\n${buildCriticalTopicItemsContext(items, false)}` : "";
-  return `Tema: ${title}${asuntos}\n\n--- HISTORIAL (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
+  const antes =
+    omitidas > 0
+      ? `\n\n(Se omiten las ${omitidas} entradas más antiguas del historial.${
+          lecturaPrevia ? ` Así las resumía la lectura de estado anterior:\n${lecturaPrevia}` : ""
+        })`
+      : "";
+  return `Tema: ${title}${asuntos}${antes}\n\n--- HISTORIAL RECIENTE (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
 }
 
 // Evaluación actual de los asuntos de un tema. Con ids cuando la IA tiene que

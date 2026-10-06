@@ -39,6 +39,29 @@ interface SpeechRecognitionLike {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+// La frase del coach se genera una vez al día por dispositivo (cada llamada a
+// Claude se cobra); "Otra frase" la regenera a pedido.
+const COACH_KEY = "lamesa-coach-dia";
+
+function leerCoachGuardado(hoy: string): string | null {
+  try {
+    const raw = window.localStorage.getItem(COACH_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as { fecha?: string; texto?: string };
+    return v.fecha === hoy && v.texto ? v.texto : null;
+  } catch {
+    return null;
+  }
+}
+
+function guardarCoach(hoy: string, texto: string) {
+  try {
+    window.localStorage.setItem(COACH_KEY, JSON.stringify({ fecha: hoy, texto }));
+  } catch {
+    // sin almacenamiento local: se regenerará en la próxima visita
+  }
+}
+
 interface LastInsight {
   review_date: string | null;
   coach_conclusion: string | null;
@@ -89,6 +112,7 @@ export default function HoyView({
 
   const [quoteOffset, setQuoteOffset] = useState(0);
   const [coachText, setCoachText] = useState<string | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
 
   useEffect(() => {
     const tick = () => {
@@ -102,7 +126,12 @@ export default function HoyView({
 
   useEffect(() => {
     if (!mounted) return;
-    void loadCoach();
+    const cargar = async () => {
+      const guardado = leerCoachGuardado(ymd(new Date()));
+      if (guardado) setCoachText(guardado);
+      else await loadCoach();
+    };
+    void cargar();
     // Solo al montar: es un saludo de una vez, no debe re-disparar en cada cambio de tarea.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
@@ -152,14 +181,19 @@ export default function HoyView({
         profile,
       ) +
       ctxSemanal;
+    setCoachLoading(true);
     try {
-      const txt = await askClaude(coachStripSystemPrompt(), user, 300);
-      setCoachText(txt.trim());
+      const txt = (await askClaude(coachStripSystemPrompt(), user, 300, "low")).trim();
+      if (txt) {
+        setCoachText(txt);
+        guardarCoach(ymd(new Date()), txt);
+      }
     } catch {
       setCoachText(
         "Tu mentor no está disponible ahora mismo. Igual: empieza por lo que de verdad importa, no por lo que grita más fuerte.",
       );
     }
+    setCoachLoading(false);
   }
 
   async function toggleDone(id: string) {
@@ -184,7 +218,7 @@ export default function HoyView({
     const today = ymd(new Date());
     const weekday = new Date().toLocaleDateString("es-CL", { weekday: "long" });
     try {
-      const rp = await askClaude(captureSystemPrompt(today, weekday), raw);
+      const rp = await askClaude(captureSystemPrompt(today, weekday), raw, 1200, "low");
       const parsed = JSON.parse(rp.replace(/```json|```/g, "").trim()) as Array<{
         title?: string;
         date?: string | null;
@@ -211,7 +245,6 @@ export default function HoyView({
       setCaptureStatus(
         rows.length === 1 ? "Tarea agregada y ordenada." : `${rows.length} tareas agregadas y ordenadas.`,
       );
-      void loadCoach();
     } catch {
       const { data } = await supabase
         .from("tasks")
@@ -404,12 +437,17 @@ export default function HoyView({
       </div>
 
       <div className="coach-strip">
-        <div className="lbl">Tu coach, hoy</div>
-        <div style={{ opacity: coachText ? 1 : 0.45 }}>{coachText ?? "…"}</div>
+        <div className="lbl">
+          Tu coach, hoy
+          <button className="coach-otra" onClick={() => void loadCoach()} disabled={coachLoading}>
+            {coachLoading ? "pensando…" : "otra frase"}
+          </button>
+        </div>
+        <div style={{ opacity: coachText && !coachLoading ? 1 : 0.45 }}>{coachText ?? "…"}</div>
       </div>
 
       {showWeeklyBanner && (
-        <Link href="/revision" className="weekly-banner">
+        <Link prefetch={false} href="/revision" className="weekly-banner">
           <span className="wb-icon">↻</span>
           <div className="wb-txt">
             <div className="wb-title">Es domingo — tu revisión semanal</div>

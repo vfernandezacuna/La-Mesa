@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Sun, Calendar, RotateCcw, Compass, Scale, Landmark, LineChart, Briefcase, type LucideIcon } from "lucide-react";
@@ -23,6 +23,13 @@ const MOBILE_LABELS: Record<string, string> = {
   "/temas-criticos": "CNX",
 };
 
+// Sin precarga, la navegación espera al servidor: este punto avisa que el
+// toque se registró mientras carga la página.
+function NavPending() {
+  const { pending } = useLinkStatus();
+  return <span className={`nav-pending ${pending ? "on" : ""}`} aria-hidden="true" />;
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
@@ -36,10 +43,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={false}
             className={`nav-item ${pathname === item.href ? "active" : ""}`}
           >
             <item.icon className="nav-icon" size={19} strokeWidth={2.25} aria-hidden="true" />
             {item.label}
+            <NavPending />
           </Link>
         ))}
 
@@ -64,10 +73,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={false}
             className={`tab-item ${pathname === item.href ? "active" : ""}`}
           >
             <item.icon className="tab-icon" size={19} strokeWidth={2} aria-hidden="true" />
             <span className="tab-lbl">{MOBILE_LABELS[item.href] ?? item.label}</span>
+            <NavPending />
           </Link>
         ))}
       </nav>
