@@ -21,8 +21,7 @@ export default async function PatrimonioPage() {
         .select("*")
         .eq("kind", "cio_patrimonio")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(30),
     ]);
 
   return (
@@ -33,7 +32,7 @@ export default async function PatrimonioPage() {
       weeklyReviews={(reviewsRes.data as WeeklyReview[]) ?? []}
       carteras={carteras}
       initialIndicators={(indicatorsRes.data as MarketIndicatorsCache | null) ?? null}
-      lastCio={(lastCioRes.data as MarketBriefing | null) ?? null}
+      cioHistory={(lastCioRes.data as MarketBriefing[] | null) ?? []}
     />
   );
 }

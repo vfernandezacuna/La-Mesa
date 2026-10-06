@@ -11,6 +11,7 @@ import {
 import { appendProfile, buildAdvisorContext, buildTaskContext, type CarteraContextEntry } from "@/lib/context";
 import { todayStr } from "@/lib/date";
 import type { PatrimonioQuarterFull } from "@/lib/fetch-patrimonio";
+import { HistorialLecturas } from "@/components/HistorialLecturas";
 import type { MarketBriefing, MarketIndicatorsCache, PatrimonioClassCode, PatrimonioLineItem, Task, WeeklyReview } from "@/lib/types";
 import { ActivosPasivosChart, type ChartRow } from "./ActivosPasivosChart";
 
@@ -62,6 +63,37 @@ interface PendingRegistro {
   deudas: Partial<Record<PatrimonioClassCode, number>>;
 }
 
+function LecturaCioTexto({ text }: { text: string }) {
+  return (
+    <div className="response-box">
+      {text.split(/\n/).map((line, i) => {
+        const m = line.match(/^(ESTRUCTURA:|APALANCAMIENTO:|TRAYECTORIA:|LO QUE MIRARÍA:|LO QUE MIRARIA:)(.*)$/);
+        if (m) {
+          return (
+            <div key={i}>
+              <strong
+                style={{
+                  color: "var(--accent-deep)",
+                  display: "block",
+                  marginTop: 15,
+                  marginBottom: 5,
+                  letterSpacing: 1,
+                  fontSize: "0.72rem",
+                  textTransform: "uppercase",
+                }}
+              >
+                {m[1]}
+              </strong>
+              {m[2]}
+            </div>
+          );
+        }
+        return <div key={i}>{line}</div>;
+      })}
+    </div>
+  );
+}
+
 export default function PatrimonioView({
   quarters: initialQuarters,
   tasks,
@@ -69,7 +101,7 @@ export default function PatrimonioView({
   weeklyReviews,
   carteras,
   initialIndicators,
-  lastCio,
+  cioHistory,
 }: {
   quarters: PatrimonioQuarterFull[];
   tasks: Task[];
@@ -77,7 +109,7 @@ export default function PatrimonioView({
   weeklyReviews: WeeklyReview[];
   carteras: CarteraContextEntry[];
   initialIndicators: MarketIndicatorsCache | null;
-  lastCio: MarketBriefing | null;
+  cioHistory: MarketBriefing[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [quarters, setQuarters] = useState<PatrimonioQuarterFull[]>(initialQuarters);
@@ -175,8 +207,9 @@ export default function PatrimonioView({
 
   // ---------- CIO ----------
   const [cioLoading, setCioLoading] = useState(false);
-  const [cioResult, setCioResult] = useState<string | null>(lastCio?.output_text ?? null);
-  const [cioFecha, setCioFecha] = useState<string | null>(lastCio?.created_at ?? null);
+  const [cioResult, setCioResult] = useState<string | null>(cioHistory[0]?.output_text ?? null);
+  const [cioFecha, setCioFecha] = useState<string | null>(cioHistory[0]?.created_at ?? null);
+  const [cioAnteriores, setCioAnteriores] = useState<MarketBriefing[]>(cioHistory.slice(1));
   const [cioError, setCioError] = useState<string | null>(null);
 
   async function analizarPatrimonio() {
@@ -204,6 +237,13 @@ export default function PatrimonioView({
         );
       const raw = await askClaude(patrimonioAnalysisSystemPrompt(), user, 1800);
       if (!raw.trim()) throw new Error("Claude respondió vacío.");
+      // La lectura que estaba vigente pasa al registro de lecturas anteriores.
+      if (cioResult && cioFecha) {
+        setCioAnteriores((prev) => [
+          { id: `prev-${cioFecha}`, created_at: cioFecha, output_text: cioResult } as MarketBriefing,
+          ...prev,
+        ]);
+      }
       setCioResult(raw.trim());
       setCioFecha(new Date().toISOString());
       // Se guarda para que siga ahí al volver; si falla el guardado, igual se ve.
@@ -732,34 +772,8 @@ export default function PatrimonioView({
           </div>
         )}
         {cioError && <div className="loading">{cioError}</div>}
-        {cioResult && (
-          <div className="response-box">
-            {cioResult.split(/\n/).map((line, i) => {
-              const m = line.match(/^(ESTRUCTURA:|APALANCAMIENTO:|TRAYECTORIA:|LO QUE MIRARÍA:|LO QUE MIRARIA:)(.*)$/);
-              if (m) {
-                return (
-                  <div key={i}>
-                    <strong
-                      style={{
-                        color: "var(--accent-deep)",
-                        display: "block",
-                        marginTop: 15,
-                        marginBottom: 5,
-                        letterSpacing: 1,
-                        fontSize: "0.72rem",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {m[1]}
-                    </strong>
-                    {m[2]}
-                  </div>
-                );
-              }
-              return <div key={i}>{line}</div>;
-            })}
-          </div>
-        )}
+        {cioResult && <LecturaCioTexto text={cioResult} />}
+        <HistorialLecturas items={cioAnteriores} render={(it) => <LecturaCioTexto text={it.output_text ?? ""} />} />
       </div>
 
       <details className="pat-manual" open={!quarters.length || undefined}>

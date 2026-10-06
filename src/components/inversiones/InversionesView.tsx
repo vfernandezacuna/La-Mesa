@@ -20,6 +20,7 @@ import {
 } from "@/lib/context";
 import { todayStr } from "@/lib/date";
 import type { MarketBriefing, MarketIndicatorsCache, Task, WeeklyReview } from "@/lib/types";
+import { HistorialLecturas } from "@/components/HistorialLecturas";
 import { EvolucionValorChart } from "./EvolucionValorChart";
 
 export interface PortfolioHistoryPoint {
@@ -108,22 +109,63 @@ function equivalenciaTexto(monto: number, indicators: MarketIndicatorsCache | nu
   return `≈ ${(monto / indicators.uf).toLocaleString("es-CL", { maximumFractionDigits: 0 })} UF · ≈ US$${(monto / indicators.dolar).toLocaleString("es-CL", { maximumFractionDigits: 0 })} (UF ${indicators.uf.toLocaleString("es-CL")} · USD ${indicators.dolar.toLocaleString("es-CL")} del ${indicators.as_of === todayStr() ? "día" : indicators.as_of})`;
 }
 
+function parseIdeas(text: string | null | undefined): Idea[] | null {
+  try {
+    return text ? (JSON.parse(text) as Idea[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function IdeaCards({ ideas }: { ideas: Idea[] }) {
+  return (
+    <>
+      {ideas.map((idea, i) => (
+        <div className="idea-card" key={i}>
+          <div className="i-head">
+            <span className="i-num">0{i + 1}</span>
+            <span className="i-title">{idea.titulo ?? ""}</span>
+          </div>
+          <div className="i-field">
+            <span className="i-lbl">Por qué ahora</span>
+            {idea.porque ?? ""}
+          </div>
+          <div className="i-field task">
+            <span className="i-lbl">Tu tarea</span>
+            {idea.tarea ?? ""}
+          </div>
+          <div className="i-field risk">
+            <span className="i-lbl">El riesgo</span>
+            {idea.riesgo ?? ""}
+          </div>
+          {idea.origen && (
+            <div style={{ marginTop: 9 }}>
+              <span className="src-chip off">de: {idea.origen}</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 function PortfolioBlock({
   portfolio,
   indicators,
   buildContext,
-  lastCio,
+  cioHistory,
 }: {
   portfolio: Portfolio;
   indicators: MarketIndicatorsCache | null;
   buildContext: () => string;
-  lastCio: MarketBriefing | null;
+  cioHistory: MarketBriefing[];
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [cioLoading, setCioLoading] = useState(false);
-  const [cioResult, setCioResult] = useState<string | null>(lastCio?.output_text ?? null);
-  const [cioFecha, setCioFecha] = useState<string | null>(lastCio?.created_at ?? null);
+  const [cioResult, setCioResult] = useState<string | null>(cioHistory[0]?.output_text ?? null);
+  const [cioFecha, setCioFecha] = useState<string | null>(cioHistory[0]?.created_at ?? null);
+  const [cioAnteriores, setCioAnteriores] = useState<MarketBriefing[]>(cioHistory.slice(1));
   const [cioError, setCioError] = useState<string | null>(null);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -159,6 +201,12 @@ function PortfolioBlock({
           buildContext(),
       );
       if (!raw.trim()) throw new Error("Claude respondió vacío.");
+      if (cioResult && cioFecha) {
+        setCioAnteriores((prev) => [
+          { id: `prev-${cioFecha}`, created_at: cioFecha, output_text: cioResult } as MarketBriefing,
+          ...prev,
+        ]);
+      }
       setCioResult(raw.trim());
       setCioFecha(new Date().toISOString());
       await supabase
@@ -322,6 +370,7 @@ function PortfolioBlock({
       )}
       {cioError && <div className="loading">{cioError}</div>}
       {cioResult && <div className="response-box">{cioResult}</div>}
+      <HistorialLecturas items={cioAnteriores} render={(it) => <div className="response-box">{it.output_text}</div>} />
     </div>
   );
 }
@@ -335,8 +384,8 @@ export default function InversionesView({
   carteras,
   lastBrief,
   lastNews,
-  lastCioByPortfolio,
-  lastIdeas,
+  cioByPortfolio,
+  ideasHistory,
   initialIndicators,
 }: {
   portfolios: Portfolio[];
@@ -347,8 +396,8 @@ export default function InversionesView({
   carteras: CarteraContextEntry[];
   lastBrief: MarketBriefing | null;
   lastNews: MarketBriefing | null;
-  lastCioByPortfolio: Record<string, MarketBriefing>;
-  lastIdeas: MarketBriefing | null;
+  cioByPortfolio: Record<string, MarketBriefing[]>;
+  ideasHistory: MarketBriefing[];
   initialIndicators: MarketIndicatorsCache | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -445,14 +494,9 @@ export default function InversionesView({
 
   // ---------- Ideas para investigar ----------
   const [ideasLoading, setIdeasLoading] = useState(false);
-  const [ideas, setIdeas] = useState<Idea[] | null>(() => {
-    try {
-      return lastIdeas?.output_text ? (JSON.parse(lastIdeas.output_text) as Idea[]) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [ideasFecha, setIdeasFecha] = useState<string | null>(lastIdeas?.created_at ?? null);
+  const [ideas, setIdeas] = useState<Idea[] | null>(() => parseIdeas(ideasHistory[0]?.output_text));
+  const [ideasFecha, setIdeasFecha] = useState<string | null>(ideasHistory[0]?.created_at ?? null);
+  const [ideasAnteriores, setIdeasAnteriores] = useState<MarketBriefing[]>(ideasHistory.slice(1));
   const [ideasError, setIdeasError] = useState<string | null>(null);
   const briefForIdeas = brief ?? lastBrief;
   const newsForIdeas = news ?? lastNews;
@@ -467,6 +511,12 @@ export default function InversionesView({
       user += `\n\nPropón ideas nuevas para investigar, con alcance global.` + advisorContext();
       const raw = await askClaudeWeb(ideasInvestigarSystemPrompt(), user, 2800);
       const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as Idea[];
+      if (ideas && ideasFecha) {
+        setIdeasAnteriores((prev) => [
+          { id: `prev-${ideasFecha}`, created_at: ideasFecha, output_text: JSON.stringify(ideas) } as MarketBriefing,
+          ...prev,
+        ]);
+      }
       setIdeas(parsed);
       setIdeasFecha(new Date().toISOString());
       await supabase.from("market_briefings").insert({ kind: "ideas", output_text: JSON.stringify(parsed) });
@@ -490,7 +540,7 @@ export default function InversionesView({
             portfolio={p}
             indicators={indicators}
             buildContext={advisorContext}
-            lastCio={lastCioByPortfolio[p.key] ?? null}
+            cioHistory={cioByPortfolio[p.key] ?? []}
           />
         ))
       )}
@@ -595,37 +645,20 @@ export default function InversionesView({
         {ideasError && <div className="loading">{ideasError}</div>}
         {ideas && (
           <>
-            {ideas.map((idea, i) => (
-              <div className="idea-card" key={i}>
-                <div className="i-head">
-                  <span className="i-num">0{i + 1}</span>
-                  <span className="i-title">{idea.titulo ?? ""}</span>
-                </div>
-                <div className="i-field">
-                  <span className="i-lbl">Por qué ahora</span>
-                  {idea.porque ?? ""}
-                </div>
-                <div className="i-field task">
-                  <span className="i-lbl">Tu tarea</span>
-                  {idea.tarea ?? ""}
-                </div>
-                <div className="i-field risk">
-                  <span className="i-lbl">El riesgo</span>
-                  {idea.riesgo ?? ""}
-                </div>
-                {idea.origen && (
-                  <div style={{ marginTop: 9 }}>
-                    <span className="src-chip off">de: {idea.origen}</span>
-                  </div>
-                )}
-              </div>
-            ))}
+            <IdeaCards ideas={ideas} />
             <div className="ideas-disclaimer">
               Estas son ideas para investigar, no recomendaciones de inversión — cada una viene con la tarea que
               tendrías que hacer antes de decidir. No soy asesor financiero.
             </div>
           </>
         )}
+        <HistorialLecturas
+          items={ideasAnteriores}
+          render={(it) => {
+            const list = parseIdeas(it.output_text);
+            return list ? <IdeaCards ideas={list} /> : null;
+          }}
+        />
       </div>
     </>
   );

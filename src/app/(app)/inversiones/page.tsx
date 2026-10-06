@@ -70,7 +70,7 @@ export default async function InversionesPage() {
       .select("*")
       .in("kind", ["cio_cartera", "ideas"])
       .order("created_at", { ascending: false })
-      .limit(40),
+      .limit(120),
     supabase.from("market_indicators_cache").select("*").eq("as_of", todayStr()).maybeSingle(),
   ]);
 
@@ -166,15 +166,13 @@ export default async function InversionesPage() {
     accountsWithPositions,
   );
 
-  // Lo más reciente de cada análisis guardado: uno por cartera y uno de ideas.
+  // Análisis guardados, del más nuevo al más antiguo: uno por cartera y el de ideas.
   const saved = (savedRes.data as MarketBriefing[] | null) ?? [];
-  const lastCioByPortfolio: Record<string, MarketBriefing> = {};
+  const cioByPortfolio: Record<string, MarketBriefing[]> = {};
   for (const r of saved) {
-    if (r.kind === "cio_cartera" && r.input_text && !lastCioByPortfolio[r.input_text]) {
-      lastCioByPortfolio[r.input_text] = r;
-    }
+    if (r.kind === "cio_cartera" && r.input_text) (cioByPortfolio[r.input_text] ??= []).push(r);
   }
-  const lastIdeas = saved.find((r) => r.kind === "ideas") ?? null;
+  const ideasHistory = saved.filter((r) => r.kind === "ideas");
 
   return (
     <InversionesView
@@ -186,8 +184,8 @@ export default async function InversionesPage() {
       carteras={carteras}
       lastBrief={(lastBriefRes.data as MarketBriefing | null) ?? null}
       lastNews={(lastNewsRes.data as MarketBriefing | null) ?? null}
-      lastCioByPortfolio={lastCioByPortfolio}
-      lastIdeas={lastIdeas}
+      cioByPortfolio={cioByPortfolio}
+      ideasHistory={ideasHistory}
       initialIndicators={(indicatorsRes.data as MarketIndicatorsCache | null) ?? null}
     />
   );
