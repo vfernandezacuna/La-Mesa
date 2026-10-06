@@ -11,7 +11,7 @@ import {
 import { appendProfile, buildAdvisorContext, buildTaskContext, type CarteraContextEntry } from "@/lib/context";
 import { todayStr } from "@/lib/date";
 import type { PatrimonioQuarterFull } from "@/lib/fetch-patrimonio";
-import type { MarketIndicatorsCache, PatrimonioClassCode, PatrimonioLineItem, Task, WeeklyReview } from "@/lib/types";
+import type { MarketBriefing, MarketIndicatorsCache, PatrimonioClassCode, PatrimonioLineItem, Task, WeeklyReview } from "@/lib/types";
 import { ActivosPasivosChart, type ChartRow } from "./ActivosPasivosChart";
 
 declare global {
@@ -69,6 +69,7 @@ export default function PatrimonioView({
   weeklyReviews,
   carteras,
   initialIndicators,
+  lastCio,
 }: {
   quarters: PatrimonioQuarterFull[];
   tasks: Task[];
@@ -76,6 +77,7 @@ export default function PatrimonioView({
   weeklyReviews: WeeklyReview[];
   carteras: CarteraContextEntry[];
   initialIndicators: MarketIndicatorsCache | null;
+  lastCio: MarketBriefing | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [quarters, setQuarters] = useState<PatrimonioQuarterFull[]>(initialQuarters);
@@ -173,14 +175,14 @@ export default function PatrimonioView({
 
   // ---------- CIO ----------
   const [cioLoading, setCioLoading] = useState(false);
-  const [cioResult, setCioResult] = useState<string | null>(null);
+  const [cioResult, setCioResult] = useState<string | null>(lastCio?.output_text ?? null);
+  const [cioFecha, setCioFecha] = useState<string | null>(lastCio?.created_at ?? null);
   const [cioError, setCioError] = useState<string | null>(null);
 
   async function analizarPatrimonio() {
     if (!quarters.length) return;
     setCioLoading(true);
     setCioError(null);
-    setCioResult(null);
     const serie = sorted
       .slice(-10)
       .map((r) => {
@@ -203,6 +205,9 @@ export default function PatrimonioView({
       const raw = await askClaude(patrimonioAnalysisSystemPrompt(), user, 1800);
       if (!raw.trim()) throw new Error("Claude respondió vacío.");
       setCioResult(raw.trim());
+      setCioFecha(new Date().toISOString());
+      // Se guarda para que siga ahí al volver; si falla el guardado, igual se ve.
+      await supabase.from("market_briefings").insert({ kind: "cio_patrimonio", output_text: raw.trim() });
     } catch (err) {
       setCioError(`No se pudo generar el análisis. ${err instanceof Error ? err.message : ""}`.trim());
     }
@@ -706,8 +711,15 @@ export default function PatrimonioView({
           Una mirada a tu estructura patrimonial: concentración, liquidez, apalancamiento y ritmo de acumulación.
         </div>
         <button className="ghost" onClick={() => void analizarPatrimonio()} disabled={cioLoading}>
-          Pedir lectura del CIO
+          {cioResult ? "Actualizar lectura del CIO" : "Pedir lectura del CIO"}
         </button>
+        {cioResult && cioFecha && !cioLoading && (
+          <div style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: 8 }}>
+            Guardada · generada el{" "}
+            {new Date(cioFecha).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" })}. Se
+            queda aquí hasta que pidas una nueva.
+          </div>
+        )}
         {cioLoading && (
           <div className="ai-loading" style={{ display: "block" }}>
             <div className="ail-head">

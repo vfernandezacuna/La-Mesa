@@ -258,7 +258,7 @@ export interface InvestmentAccountPosition {
 export interface MarketBriefing {
   id: string;
   user_id: string;
-  kind: "brief" | "news";
+  kind: "brief" | "news" | "cio_patrimonio" | "cio_cartera" | "ideas";
   input_text: string | null;
   output_text: string | null;
   output_html: string | null;

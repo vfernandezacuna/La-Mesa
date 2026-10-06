@@ -112,14 +112,18 @@ function PortfolioBlock({
   portfolio,
   indicators,
   buildContext,
+  lastCio,
 }: {
   portfolio: Portfolio;
   indicators: MarketIndicatorsCache | null;
   buildContext: () => string;
+  lastCio: MarketBriefing | null;
 }) {
   const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [cioLoading, setCioLoading] = useState(false);
-  const [cioResult, setCioResult] = useState<string | null>(null);
+  const [cioResult, setCioResult] = useState<string | null>(lastCio?.output_text ?? null);
+  const [cioFecha, setCioFecha] = useState<string | null>(lastCio?.created_at ?? null);
   const [cioError, setCioError] = useState<string | null>(null);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -148,7 +152,6 @@ function PortfolioBlock({
   async function analizarCartera() {
     setCioLoading(true);
     setCioError(null);
-    setCioResult(null);
     try {
       const raw = await askClaude(
         carteraAnalysisSystemPrompt(),
@@ -157,6 +160,10 @@ function PortfolioBlock({
       );
       if (!raw.trim()) throw new Error("Claude respondió vacío.");
       setCioResult(raw.trim());
+      setCioFecha(new Date().toISOString());
+      await supabase
+        .from("market_briefings")
+        .insert({ kind: "cio_cartera", input_text: portfolio.key, output_text: raw.trim() });
     } catch (err) {
       setCioError(`No se pudo generar el análisis. ${err instanceof Error ? err.message : ""}`.trim());
     }
@@ -294,8 +301,13 @@ function PortfolioBlock({
 
       <div style={{ marginTop: 14 }}>
         <button onClick={() => void analizarCartera()} disabled={cioLoading || !positions.length}>
-          Análisis del CIO
+          {cioResult ? "Actualizar análisis del CIO" : "Análisis del CIO"}
         </button>
+        {cioResult && cioFecha && !cioLoading && (
+          <span style={{ fontSize: "0.72rem", color: "var(--muted)", marginLeft: 12 }}>
+            Guardado · {new Date(cioFecha).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" })}
+          </span>
+        )}
       </div>
       {cioLoading && (
         <div className="ai-loading" style={{ display: "block" }}>
@@ -323,6 +335,8 @@ export default function InversionesView({
   carteras,
   lastBrief,
   lastNews,
+  lastCioByPortfolio,
+  lastIdeas,
   initialIndicators,
 }: {
   portfolios: Portfolio[];
@@ -333,6 +347,8 @@ export default function InversionesView({
   carteras: CarteraContextEntry[];
   lastBrief: MarketBriefing | null;
   lastNews: MarketBriefing | null;
+  lastCioByPortfolio: Record<string, MarketBriefing>;
+  lastIdeas: MarketBriefing | null;
   initialIndicators: MarketIndicatorsCache | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -395,7 +411,7 @@ export default function InversionesView({
   // ---------- Resumen de noticias pegadas ----------
   const [newsInput, setNewsInput] = useState("");
   const [newsLoading, setNewsLoading] = useState(false);
-  const [news, setNews] = useState<MarketBriefing | null>(null);
+  const [news, setNews] = useState<MarketBriefing | null>(lastNews);
   const [newsError, setNewsError] = useState<string | null>(null);
 
   async function resumirNoticias() {
@@ -429,7 +445,14 @@ export default function InversionesView({
 
   // ---------- Ideas para investigar ----------
   const [ideasLoading, setIdeasLoading] = useState(false);
-  const [ideas, setIdeas] = useState<Idea[] | null>(null);
+  const [ideas, setIdeas] = useState<Idea[] | null>(() => {
+    try {
+      return lastIdeas?.output_text ? (JSON.parse(lastIdeas.output_text) as Idea[]) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [ideasFecha, setIdeasFecha] = useState<string | null>(lastIdeas?.created_at ?? null);
   const [ideasError, setIdeasError] = useState<string | null>(null);
   const briefForIdeas = brief ?? lastBrief;
   const newsForIdeas = news ?? lastNews;
@@ -437,7 +460,6 @@ export default function InversionesView({
   async function generarIdeas() {
     setIdeasLoading(true);
     setIdeasError(null);
-    setIdeas(null);
     try {
       let user = `Fecha: ${todayStr()}.\n\nCONTEXTO — lo que YA tengo en cartera (úsalo solo para NO repetirme esto y para no concentrarme más el riesgo; no es la fuente de las ideas): ${posicionesCombinadas(true)}.`;
       if (briefForIdeas?.output_text) user += `\n\nMI BRIEFING MÁS RECIENTE:\n${briefForIdeas.output_text}`;
@@ -446,6 +468,8 @@ export default function InversionesView({
       const raw = await askClaudeWeb(ideasInvestigarSystemPrompt(), user, 2800);
       const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as Idea[];
       setIdeas(parsed);
+      setIdeasFecha(new Date().toISOString());
+      await supabase.from("market_briefings").insert({ kind: "ideas", output_text: JSON.stringify(parsed) });
     } catch {
       setIdeasError("No se pudieron generar las ideas. Intenta nuevamente.");
     }
@@ -461,7 +485,13 @@ export default function InversionesView({
         <div className="empty-note">Aún no hay ninguna cartera registrada.</div>
       ) : (
         portfolios.map((p) => (
-          <PortfolioBlock key={p.key} portfolio={p} indicators={indicators} buildContext={advisorContext} />
+          <PortfolioBlock
+            key={p.key}
+            portfolio={p}
+            indicators={indicators}
+            buildContext={advisorContext}
+            lastCio={lastCioByPortfolio[p.key] ?? null}
+          />
         ))
       )}
 
@@ -544,8 +574,13 @@ export default function InversionesView({
           <span className="src-chip on">✓ research global en vivo</span>
         </div>
         <button onClick={() => void generarIdeas()} disabled={ideasLoading}>
-          Proponer ideas para investigar
+          {ideas ? "Proponer ideas nuevas" : "Proponer ideas para investigar"}
         </button>
+        {ideas && ideasFecha && !ideasLoading && (
+          <span style={{ fontSize: "0.72rem", color: "var(--muted)", marginLeft: 12 }}>
+            Guardadas · {new Date(ideasFecha).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" })}
+          </span>
+        )}
         {ideasLoading && (
           <div className="ai-loading" style={{ display: "block" }}>
             <div className="ail-head">
