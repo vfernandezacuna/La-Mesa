@@ -14,6 +14,8 @@ export interface MaterialLeido {
   textos: string[];
   /** PDF e imágenes (sueltos o adjuntos de un correo) para que los lea Claude. */
   binarios: AdjuntoBinario[];
+  /** Cosas que el usuario debería saber, p. ej. que la planilla venía solo como enlace. */
+  avisos?: string[];
 }
 
 const MAX_FILAS_POR_HOJA = 400;
@@ -91,6 +93,16 @@ async function leerCsv(nombre: string, file: File): Promise<string> {
   return `[Planilla ${nombre}]\n${corto}`;
 }
 
+// Los correos de Outlook suelen traer el Excel como enlace de SharePoint o
+// OneDrive y no como adjunto: ese contenido no se puede leer desde aquí.
+const AVISO_ENLACE =
+  "El correo trae la planilla Excel como enlace (SharePoint u OneDrive), no como adjunto, así que no pude leer sus cifras. Descárgala y adjúntala junto al correo.";
+
+function planillaSoloComoEnlace(cuerpo: string, salida: MaterialLeido): boolean {
+  const leyoPlanilla = salida.textos.some((t) => t.startsWith("[Planilla"));
+  return !leyoPlanilla && /(sharepoint\.com|onedrive|1drv\.ms)/i.test(cuerpo) && /(\.xlsx|\/:x:\/)/i.test(cuerpo);
+}
+
 function tipoDeAdjunto(nombre: string, mime: string): "xlsx" | "pdf" | "imagen" | null {
   if (/\.xlsx$/i.test(nombre) || /spreadsheetml/.test(mime)) return "xlsx";
   if (/\.pdf$/i.test(nombre) || mime === "application/pdf") return "pdf";
@@ -135,6 +147,7 @@ async function leerEml(file: File): Promise<MaterialLeido> {
     if (!adj.filename && !adj.mimeType) continue;
     await procesarAdjunto(adj.filename ?? "adjunto", adj.mimeType ?? "", bytesDe(adj.content), salida);
   }
+  if (planillaSoloComoEnlace(`${email.text ?? ""} ${email.html ?? ""}`, salida)) salida.avisos = [AVISO_ENLACE];
   return salida;
 }
 
@@ -166,6 +179,7 @@ async function leerMsg(file: File): Promise<MaterialLeido> {
       // adjunto ilegible: se omite
     }
   }
+  if (planillaSoloComoEnlace(cuerpo, salida)) salida.avisos = [AVISO_ENLACE];
   return salida;
 }
 

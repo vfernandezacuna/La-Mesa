@@ -291,6 +291,7 @@ export default function CriticalTopicsView({
       const fileName = files.length ? files.map((f) => f.name).join(", ").slice(0, 300) : null;
       const bloques: string[] = text ? [text] : [];
       const reporte: string[] = [];
+      const avisos: string[] = [];
       const binarios: AdjuntoBinario[] = [];
 
       for (const f of files) {
@@ -298,6 +299,7 @@ export default function CriticalTopicsView({
           // correo (con su Excel adjunto, si trae) o planilla suelta
           const leido = await leerArchivoDeReporte(f);
           reporte.push(...leido.textos);
+          avisos.push(...(leido.avisos ?? []));
           binarios.push(...leido.binarios);
         } else if (isTextFile(f)) {
           bloques.push(await f.text());
@@ -313,7 +315,11 @@ export default function CriticalTopicsView({
         const nombres = files.map((f) => f.name).join(", ");
         if (/pmo/i.test(topic.title)) {
           // Tema de la PMO: reporte estructurado para el panel (cifras, highlights, críticos, hitos)
-          const previos = (reportesPmo(entries)[0]?.report.kpis ?? []).map((k) => `${k.grupo} · ${k.nombre}`);
+          const ultimo = reportesPmo(entries)[0]?.report;
+          const previos = [
+            ...(ultimo?.habilitantes ?? []).map((h) => h.nombre),
+            ...(ultimo?.kpis ?? []).map((k) => `${k.grupo} · ${k.nombre}`),
+          ];
           try {
             const raw = await askClaude(criticalTopicPmoReportSystemPrompt(previos), crudo, 3500, "low");
             const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
@@ -359,6 +365,9 @@ export default function CriticalTopicsView({
       if (newEntry) setEntries(allEntries);
       setNoteText("");
       setFileLabel("");
+      // el aviso del enlace solo vale si ninguna planilla se leyó en esta tanda
+      const hayPlanilla = reporte.some((t) => t.startsWith("[Planilla"));
+      if (avisos.length && !hayPlanilla) setComposeError(avisos[0]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       void actualizarLectura(topic, allEntries);
     } catch {

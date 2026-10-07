@@ -1,7 +1,19 @@
 "use client";
 
-import { ArrowDownRight, ArrowUpRight, CalendarClock, CircleCheck, Equal, TriangleAlert } from "lucide-react";
-import { compararKpis, formatDelta, type KpiComparado } from "@/lib/pmo";
+import {
+  ArrowDownRight,
+  ArrowRightLeft,
+  ArrowUpRight,
+  CalendarClock,
+  CircleCheck,
+  Equal,
+  Layers,
+  RefreshCw,
+  Sparkle,
+  TriangleAlert,
+  Users,
+} from "lucide-react";
+import { compararHabilitantes, compararKpis, formatDelta, type HabilitanteComparado, type KpiComparado } from "@/lib/pmo";
 import { fechaCorta } from "@/lib/date";
 import type { CriticalTopicEntry, PmoReport } from "@/lib/types";
 
@@ -32,6 +44,65 @@ function Variacion({ c }: { c: KpiComparado }) {
   );
 }
 
+function NovedadChip({ texto }: { texto: string }) {
+  const t = texto.toLowerCase();
+  if (/mantiene|sin cambio|igual/.test(t)) {
+    return (
+      <span className="pmo-chip igual-suave">
+        <Equal size={13} aria-hidden="true" /> {texto}
+      </span>
+    );
+  }
+  if (/nuevo|nueva|incorpor/.test(t)) {
+    return (
+      <span className="pmo-chip mov">
+        <Sparkle size={13} aria-hidden="true" /> {texto}
+      </span>
+    );
+  }
+  return (
+    <span className="pmo-chip mov">
+      <RefreshCw size={13} aria-hidden="true" /> {texto}
+    </span>
+  );
+}
+
+function HabilitanteRow({ c }: { c: HabilitanteComparado }) {
+  const { h } = c;
+  return (
+    <div className="hab-row">
+      <div className="hab-main">
+        <div className="hab-nombre">{h.nombre}</div>
+        <div className="hab-metas">
+          {h.cantidad && <span className="hab-meta">{h.cantidad}</span>}
+          {h.tramos && <span className="hab-meta">Tramos {h.tramos}</span>}
+        </div>
+      </div>
+      <div className="hab-estado">
+        {h.estado}
+        {h.responsable && <div className="hab-resp">Responsable: {h.responsable}</div>}
+      </div>
+      <div className="hab-fecha">
+        <div className="hab-fecha-lbl">Fecha estimada</div>
+        <div className="hab-fecha-val">{h.fecha ?? "Sin fecha"}</div>
+        <div className="hab-chips">
+          {c.nuevo && (
+            <span className="pmo-chip mov">
+              <Sparkle size={13} aria-hidden="true" /> Nuevo esta semana
+            </span>
+          )}
+          {c.cambios.map((x) => (
+            <span className="pmo-chip cambio" key={x}>
+              <ArrowRightLeft size={13} aria-hidden="true" /> {x}
+            </span>
+          ))}
+          {h.novedad && <NovedadChip texto={h.novedad} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PanelPMO({ reportes, color }: { reportes: ReporteGuardado[]; color: string }) {
   if (!reportes.length) return null;
   const [actual, previo, ...antiguos] = reportes;
@@ -39,6 +110,9 @@ export function PanelPMO({ reportes, color }: { reportes: ReporteGuardado[]; col
   const comparados = compararKpis(r, previo?.report ?? null);
   const grupos = [...new Set(comparados.map((c) => c.kpi.grupo))];
   const sinAvance = comparados.filter((c) => c.sinVariacion);
+  const habilitantes = compararHabilitantes(r, previo?.report ?? null);
+  const acciones = r.acciones ?? [];
+  const porArea = [...new Set(acciones.map((a) => a.area))];
 
   return (
     <div className="topic-card pmo" style={{ borderTopColor: color, borderTopWidth: 3 }}>
@@ -55,6 +129,37 @@ export function PanelPMO({ reportes, color }: { reportes: ReporteGuardado[]; col
       {r.titular && (
         <div className="lect-frase" style={{ borderLeftColor: color }}>
           {r.titular}
+        </div>
+      )}
+
+      {habilitantes.length > 0 && (
+        <div className="pmo-bloque">
+          <div className="pmo-grupo-lbl">
+            <Layers size={13} aria-hidden="true" /> Habilitantes de la liberación de sitios
+          </div>
+          {habilitantes.map((c) => (
+            <HabilitanteRow c={c} key={c.h.nombre} />
+          ))}
+        </div>
+      )}
+
+      {acciones.length > 0 && (
+        <div className="pmo-bloque">
+          <div className="pmo-grupo-lbl">
+            <Users size={13} aria-hidden="true" /> Lo que la PMO pide a cada área
+          </div>
+          {porArea.map((area) => (
+            <div className="acc-area" key={area}>
+              <div className="acc-area-nombre">{area}</div>
+              <ul>
+                {acciones
+                  .filter((a) => a.area === area)
+                  .map((a, i) => (
+                    <li key={i}>{a.texto}</li>
+                  ))}
+              </ul>
+            </div>
+          ))}
         </div>
       )}
 

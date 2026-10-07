@@ -1,4 +1,12 @@
-import type { CriticalTopicEntry, PmoCritico, PmoHito, PmoKpi, PmoReport } from "./types";
+import type {
+  CriticalTopicEntry,
+  PmoAccion,
+  PmoCritico,
+  PmoHabilitante,
+  PmoHito,
+  PmoKpi,
+  PmoReport,
+} from "./types";
 
 function txt(v: unknown, max: number): string | null {
   return typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
@@ -43,8 +51,43 @@ export function sanitizePmoReport(raw: unknown): PmoReport | null {
     if (hitos.length >= 6) break;
   }
 
-  if (!kpis.length && !highlights.length && !criticos.length && !hitos.length) return null;
-  return { fecha_reporte: fechaIso(r.fecha_reporte), titular: txt(r.titular, 200), kpis, highlights, criticos, hitos };
+  const habilitantes: PmoHabilitante[] = [];
+  for (const h of Array.isArray(r.habilitantes) ? (r.habilitantes as Record<string, unknown>[]) : []) {
+    const nombre = txt(h?.nombre, 80);
+    const estado = txt(h?.estado, 260);
+    if (!nombre || !estado) continue;
+    habilitantes.push({
+      nombre,
+      estado,
+      cantidad: txt(h.cantidad, 60),
+      fecha: txt(h.fecha, 40),
+      tramos: txt(h.tramos, 60),
+      responsable: txt(h.responsable, 80),
+      novedad: txt(h.novedad, 40),
+    });
+    if (habilitantes.length >= 10) break;
+  }
+
+  const acciones: PmoAccion[] = [];
+  for (const a of Array.isArray(r.acciones) ? (r.acciones as Record<string, unknown>[]) : []) {
+    const texto = txt(a?.texto, 260);
+    if (texto) acciones.push({ area: txt(a.area, 80) ?? "Áreas", texto });
+    if (acciones.length >= 8) break;
+  }
+
+  if (!kpis.length && !highlights.length && !criticos.length && !hitos.length && !habilitantes.length && !acciones.length) {
+    return null;
+  }
+  return {
+    fecha_reporte: fechaIso(r.fecha_reporte),
+    titular: txt(r.titular, 220),
+    habilitantes,
+    acciones,
+    kpis,
+    highlights,
+    criticos,
+    hitos,
+  };
 }
 
 // Texto legible del reporte: es lo que queda en el historial del tema y lo que
@@ -52,6 +95,22 @@ export function sanitizePmoReport(raw: unknown): PmoReport | null {
 export function formatPmoReport(r: PmoReport): string {
   const partes: string[] = [];
   partes.push(`REPORTE PMO${r.fecha_reporte ? ` del ${r.fecha_reporte}` : ""}${r.titular ? ` — ${r.titular}` : ""}`);
+  if (r.habilitantes?.length) {
+    partes.push(
+      "HABILITANTES:\n" +
+        r.habilitantes
+          .map((h) => {
+            const datos = [h.cantidad, h.tramos && `tramos ${h.tramos}`, h.fecha && `fecha estimada ${h.fecha}`, h.responsable && `responsable ${h.responsable}`, h.novedad]
+              .filter(Boolean)
+              .join(" · ");
+            return `- ${h.nombre}: ${h.estado}${datos ? ` (${datos})` : ""}`;
+          })
+          .join("\n"),
+    );
+  }
+  if (r.acciones?.length) {
+    partes.push("LO QUE LA PMO PIDE:\n" + r.acciones.map((a) => `- ${a.area}: ${a.texto}`).join("\n"));
+  }
   if (r.kpis.length) {
     partes.push("CIFRAS CLAVE:\n" + r.kpis.map((k) => `- ${k.grupo} · ${k.nombre}: ${k.valor}`).join("\n"));
   }
@@ -108,4 +167,30 @@ export function reportesPmo(entries: CriticalTopicEntry[]): { entry: CriticalTop
 export function formatDelta(delta: number, unidad: string | null): string {
   const n = Math.abs(delta) < 1 && delta !== 0 ? delta.toFixed(2) : String(Math.round(delta * 100) / 100);
   return `${delta > 0 ? "+" : ""}${n}${unidad === "%" ? " pp" : unidad ? ` ${unidad}` : ""}`;
+}
+
+const claveH = (h: PmoHabilitante) => h.nombre.toLowerCase().replace(/\s+/g, " ").trim();
+const norm = (v: string | null) => (v ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
+export interface HabilitanteComparado {
+  h: PmoHabilitante;
+  /** true si no existía en el reporte anterior. */
+  nuevo: boolean;
+  /** Cambios de fecha o cantidad contra el reporte anterior, con el valor de antes. */
+  cambios: string[];
+}
+
+// Como con las cifras, el cambio de fechas y cantidades lo detecta el código
+// comparando lo guardado de cada semana.
+export function compararHabilitantes(actual: PmoReport, previo: PmoReport | null): HabilitanteComparado[] {
+  const anteriores = new Map((previo?.habilitantes ?? []).map((h) => [claveH(h), h]));
+  const hayPrevio = (previo?.habilitantes?.length ?? 0) > 0;
+  return (actual.habilitantes ?? []).map((h) => {
+    const ant = anteriores.get(claveH(h));
+    if (!ant) return { h, nuevo: hayPrevio, cambios: [] };
+    const cambios: string[] = [];
+    if (norm(h.fecha) !== norm(ant.fecha)) cambios.push(`Fecha: antes ${ant.fecha ?? "sin fecha"}`);
+    if (norm(h.cantidad) !== norm(ant.cantidad)) cambios.push(`Cantidad: antes ${ant.cantidad ?? "sin dato"}`);
+    return { h, nuevo: false, cambios };
+  });
 }
