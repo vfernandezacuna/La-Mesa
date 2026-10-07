@@ -6,11 +6,18 @@ import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWithFile } from "@/lib/claude-client";
 import {
   criticalTopicFileExtractionSystemPrompt,
+  criticalTopicReportExtractionSystemPrompt,
   criticalTopicStatusSystemPrompt,
   criticalTopicTasksSystemPrompt,
 } from "@/lib/prompts";
 import { appendProfile, buildCriticalTopicContext } from "@/lib/context";
 import { fechaCorta, ymd } from "@/lib/date";
+import {
+  EXTENSIONES_CORREO,
+  EXTENSIONES_PLANILLA,
+  leerArchivoDeReporte,
+  type AdjuntoBinario,
+} from "@/lib/material-files";
 import type { CriticalTopic, CriticalTopicEntry, CriticalTopicTaskProposal, TaskPriority } from "@/lib/types";
 import { LecturaEstado } from "./LecturaEstado";
 import { TareasPorHacer, type TaskChoice } from "./TareasPorHacer";
@@ -270,35 +277,52 @@ export default function CriticalTopicsView({
   async function agregar() {
     if (!topic) return;
     const text = noteText.trim();
-    const file = fileInputRef.current?.files?.[0] ?? null;
-    if (!text && !file) return;
+    const files = Array.from(fileInputRef.current?.files ?? []);
+    if (!text && !files.length) return;
     setComposing(true);
     setComposeError(null);
     setTasksAddedMsg(null);
     try {
-      let contentText: string;
-      let kind: "note" | "material" = "note";
-      let fileName: string | null = null;
-      if (file) {
-        kind = "material";
-        fileName = file.name;
-        if (isTextFile(file)) {
-          const raw = await file.text();
-          contentText = text ? `${text}\n\n${raw}` : raw;
+      const kind: "note" | "material" = files.length ? "material" : "note";
+      const fileName = files.length ? files.map((f) => f.name).join(", ").slice(0, 300) : null;
+      const bloques: string[] = text ? [text] : [];
+      const reporte: string[] = [];
+      const binarios: AdjuntoBinario[] = [];
+
+      for (const f of files) {
+        if (EXTENSIONES_CORREO.test(f.name) || EXTENSIONES_PLANILLA.test(f.name)) {
+          // correo (con su Excel adjunto, si trae) o planilla suelta
+          const leido = await leerArchivoDeReporte(f);
+          reporte.push(...leido.textos);
+          binarios.push(...leido.binarios);
+        } else if (isTextFile(f)) {
+          bloques.push(await f.text());
         } else {
-          const { base64, mediaType } = await prepareFileForClaude(file);
-          const extracted = await askClaudeWithFile(
-            criticalTopicFileExtractionSystemPrompt(),
-            base64,
-            mediaType,
-            text || "Extrae y transcribe el contenido relevante de este archivo.",
-            2000,
-          );
-          contentText = text ? `${text}\n\n[Extraído de ${file.name}]\n${extracted.trim()}` : extracted.trim();
+          const { base64, mediaType } = await prepareFileForClaude(f);
+          binarios.push({ name: f.name, base64, mediaType });
         }
-      } else {
-        contentText = text;
       }
+
+      if (reporte.length) {
+        const extraido = await askClaude(
+          criticalTopicReportExtractionSystemPrompt(),
+          reporte.join("\n\n").slice(0, 60000) + (text ? `\n\nNota de quien lo adjunta: ${text}` : ""),
+          2500,
+          "low",
+        );
+        bloques.push(`[Reporte extraído de ${files.map((f) => f.name).join(", ")}]\n${extraido.trim()}`);
+      }
+      for (const b of binarios) {
+        const extraido = await askClaudeWithFile(
+          criticalTopicFileExtractionSystemPrompt(),
+          b.base64,
+          b.mediaType,
+          text || "Extrae y transcribe el contenido relevante de este archivo.",
+          2000,
+        );
+        bloques.push(`[Extraído de ${b.name}]\n${extraido.trim()}`);
+      }
+      const contentText = bloques.join("\n\n");
       const { data: entryData } = await supabase
         .from("critical_topic_entries")
         .insert({ topic_id: topic.id, kind, content_text: contentText, file_name: fileName })
@@ -403,7 +427,7 @@ export default function CriticalTopicsView({
           <div className="topic-card compact">
             <h2>Agregar nota o material</h2>
             <textarea
-              placeholder="Pegá una nota o el cuerpo de un correo, o adjuntá un PDF, foto (incluye HEIC del iPad) o texto…"
+              placeholder="Pegá una nota o el cuerpo de un correo, o adjuntá archivos: correo (.eml o .msg, con su Excel), planilla (.xlsx), PDF, foto (incluye HEIC del iPad) o texto…"
               value={noteText}
               rows={3}
               onChange={(e) => setNoteText(e.target.value)}
@@ -412,9 +436,13 @@ export default function CriticalTopicsView({
               <input
                 type="file"
                 ref={fileInputRef}
-                accept=".pdf,.txt,.md,image/*,.heic,.heif"
+                accept=".pdf,.txt,.md,image/*,.heic,.heif,.eml,.msg,.xlsx,.csv"
+                multiple
                 style={{ display: "none" }}
-                onChange={(e) => setFileLabel(e.target.files?.[0]?.name ?? "")}
+                onChange={(e) => {
+                  const nombres = Array.from(e.target.files ?? []).map((f) => f.name);
+                  setFileLabel(nombres.length > 2 ? `${nombres.length} archivos` : nombres.join(", "));
+                }}
               />
               <button className="ghost btn-icon btn-sm" onClick={() => fileInputRef.current?.click()}>
                 <Paperclip size={14} aria-hidden="true" />
