@@ -702,6 +702,17 @@ button.seg.on{border-color:var(--ink);background:var(--surface);box-shadow:inset
 button.btn-icon{display:inline-flex;align-items:center;gap:7px;}
 
 
+/* CNX Tracker — adjuntar varios archivos */
+.adj-zona{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px;padding:10px 12px;border:1px dashed var(--hairline-strong);border-radius:10px;}
+.adj-zona.on{border-color:var(--azul-deep);background:var(--azul-tint);}
+.adj-hint{font-size:0.8rem;color:var(--n600);}
+.adj-lista{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.adj-chip{display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;background:var(--paper);border:1px solid var(--hairline-strong);border-radius:999px;padding:4px 6px 4px 10px;max-width:100%;overflow-wrap:anywhere;}
+.adj-peso{color:var(--n600);font-size:0.72rem;}
+button.adj-x{background:transparent;border:none;box-shadow:none;color:var(--n600);padding:3px;min-height:0;border-radius:50%;display:inline-flex;}
+button.adj-x:hover{background:var(--surface);color:var(--ink);transform:none;box-shadow:none;}
+.adj-notas{margin-top:10px;font-size:0.82rem;line-height:1.6;color:var(--n700);background:var(--paper);border:1px solid var(--hairline);border-radius:8px;padding:8px 12px;}
+
 /* CNX Tracker — estado por frente */
 .frentes{margin-bottom:18px;border:1px solid var(--hairline);border-radius:10px;background:var(--paper);padding:10px 16px 6px;}
 .frentes-head{display:flex;align-items:center;gap:10px;margin-bottom:4px;}

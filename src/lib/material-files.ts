@@ -16,6 +16,10 @@ export interface MaterialLeido {
   binarios: AdjuntoBinario[];
   /** Cosas que el usuario debería saber, p. ej. que la planilla venía solo como enlace. */
   avisos?: string[];
+  /** Qué se leyó de cada archivo (o por qué no se pudo), para mostrárselo al usuario. */
+  notas: string[];
+  /** Cuántas planillas se alcanzaron a leer. */
+  planillasLeidas: number;
 }
 
 const MAX_FILAS_POR_HOJA = 400;
@@ -79,21 +83,75 @@ function hojaATexto(nombre: string, filas: unknown[][]): string {
   return `[Hoja "${nombre}"]\n${lineas.join("\n")}`;
 }
 
-async function leerXlsx(nombre: string, datos: File | Blob): Promise<string> {
-  const { default: readExcelFile } = await import("read-excel-file/universal");
-  const todas = (await readExcelFile(datos)) as { sheet: string; data: unknown[][] }[];
-  // las hojas de conteo o resumen primero: si el archivo es grande, lo recortado son las demás
-  const prioridad = (n: string) => (/conteo|resumen|mes|semana|proyecci/i.test(n) ? 0 : 1);
-  const hojas = [...todas].sort((a, b) => prioridad(a.sheet) - prioridad(b.sheet));
-  const partes = hojas.slice(0, MAX_HOJAS).map((h) => hojaATexto(h.sheet, h.data));
-  const extra = hojas.length > MAX_HOJAS ? `\n[…${hojas.length - MAX_HOJAS} hojas más no se leyeron]` : "";
-  return `[Planilla ${nombre}]\n${partes.join("\n\n")}${extra}`;
+const MB = 1024 * 1024;
+const MAX_BYTES_XLSX = 80 * MB;
+const MAX_BYTES_LIVIANO = 6 * MB;
+const prioritaria = (n: string) => /conteo|resumen|mes|semana|proyecci/i.test(n);
+
+function decodificarXml(v: string): string {
+  return v
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&amp;/g, "&");
 }
 
-async function leerCsv(nombre: string, file: File): Promise<string> {
+// Los nombres de las hojas se sacan del workbook.xml sin descomprimir el resto
+// del archivo, para poder leer solo las hojas que importan.
+async function nombresDeHojas(buf: ArrayBuffer): Promise<string[]> {
+  const { unzipSync, strFromU8 } = await import("fflate");
+  const partes = unzipSync(new Uint8Array(buf), { filter: (f) => f.name === "xl/workbook.xml" });
+  const xml = partes["xl/workbook.xml"];
+  if (!xml) return [];
+  return [...strFromU8(xml).matchAll(/<sheet\b[^>]*?\bname="([^"]*)"/g)].map((m) => decodificarXml(m[1]));
+}
+
+// Un Excel pesado casi siempre lo es por hojas enormes (detalle por estructura)
+// o por imágenes. Se leen primero las hojas de conteo o resumen y las demás solo
+// si el archivo es liviano, así el peso del archivo no impide leer lo clave.
+async function leerXlsx(nombre: string, datos: Blob): Promise<{ texto: string; nota: string }> {
+  if (datos.size > MAX_BYTES_XLSX) {
+    throw new Error(`pesa ${(datos.size / MB).toFixed(0)} MB, demasiado para leerlo desde el navegador`);
+  }
+  const { readSheet } = await import("read-excel-file/universal");
+  const todas = await nombresDeHojas(await datos.arrayBuffer());
+  const prioritarias = todas.filter(prioritaria);
+  const liviano = datos.size <= MAX_BYTES_LIVIANO;
+  const elegidas = (
+    prioritarias.length
+      ? liviano
+        ? [...prioritarias, ...todas.filter((n) => !prioritarias.includes(n))]
+        : prioritarias.slice(0, 3)
+      : liviano
+        ? todas
+        : todas.slice(0, 1)
+  ).slice(0, MAX_HOJAS);
+  if (!elegidas.length) throw new Error("no encontré hojas dentro del archivo");
+
+  const partes: string[] = [];
+  const leidas: string[] = [];
+  for (const hoja of elegidas) {
+    try {
+      const filas = (await readSheet(datos, hoja)) as unknown[][];
+      partes.push(hojaATexto(hoja, filas));
+      leidas.push(hoja);
+    } catch {
+      // una hoja que falla no impide leer las demás
+    }
+  }
+  if (!partes.length) throw new Error("no se pudo leer ninguna hoja");
+  const omitidas = todas.length - leidas.length;
+  const nota = `Planilla ${nombre}: leí ${leidas.length} de ${todas.length} hojas (${leidas.join(", ")})${omitidas > 0 ? `; no leí ${omitidas} por tamaño` : ""}.`;
+  const extra = omitidas > 0 ? `\n[Hojas no leídas: ${todas.filter((n) => !leidas.includes(n)).join(", ")}]` : "";
+  return { texto: `[Planilla ${nombre}]\n${partes.join("\n\n")}${extra}`, nota };
+}
+
+async function leerCsv(nombre: string, file: File): Promise<{ texto: string; nota: string }> {
   const texto = await file.text();
   const corto = texto.length > MAX_CARACTERES_POR_HOJA ? `${texto.slice(0, MAX_CARACTERES_POR_HOJA)}\n[…recortado]` : texto;
-  return `[Planilla ${nombre}]\n${corto}`;
+  return { texto: `[Planilla ${nombre}]\n${corto}`, nota: `Planilla ${nombre}: leída.` };
 }
 
 // Los correos de Outlook suelen traer el Excel como enlace de SharePoint o
@@ -102,8 +160,7 @@ const AVISO_ENLACE =
   "El correo trae la planilla Excel como enlace (SharePoint u OneDrive), no como adjunto, así que no pude leer sus cifras. Descárgala y adjúntala junto al correo.";
 
 function planillaSoloComoEnlace(cuerpo: string, salida: MaterialLeido): boolean {
-  const leyoPlanilla = salida.textos.some((t) => t.startsWith("[Planilla"));
-  return !leyoPlanilla && /(sharepoint\.com|onedrive|1drv\.ms)/i.test(cuerpo) && /(\.xlsx|\/:x:\/)/i.test(cuerpo);
+  return salida.planillasLeidas === 0 && /(sharepoint\.com|onedrive|1drv\.ms)/i.test(cuerpo) && /(\.xlsx|\/:x:\/)/i.test(cuerpo);
 }
 
 function tipoDeAdjunto(nombre: string, mime: string): "xlsx" | "pdf" | "imagen" | null {
@@ -123,9 +180,12 @@ async function procesarAdjunto(
   if (tipo === "xlsx") {
     try {
       const blob = new Blob([bytes as BlobPart], { type: mime || "application/octet-stream" });
-      salida.textos.push(await leerXlsx(nombre, blob));
-    } catch {
-      salida.textos.push(`[Planilla ${nombre}: no se pudo leer; revisa que sea un .xlsx válido]`);
+      const { texto, nota } = await leerXlsx(nombre, blob);
+      salida.textos.push(texto);
+      salida.notas.push(nota);
+      salida.planillasLeidas++;
+    } catch (err) {
+      salida.notas.push(`⚠ Planilla ${nombre}: no se pudo leer (${err instanceof Error ? err.message : "error"}). Prueba exportando la hoja "Conteo - Mes" a CSV y adjuntándola.`);
     }
   } else if (tipo === "pdf") {
     salida.binarios.push({ name: nombre, base64: aBase64(bytes), mediaType: "application/pdf" });
@@ -138,7 +198,7 @@ async function procesarAdjunto(
 async function leerEml(file: File): Promise<MaterialLeido> {
   const { default: PostalMime } = await import("postal-mime");
   const email = await PostalMime.parse(await file.arrayBuffer());
-  const salida: MaterialLeido = { textos: [], binarios: [] };
+  const salida: MaterialLeido = { textos: [], binarios: [], notas: [], planillasLeidas: 0 };
 
   const cuerpo = (email.text?.trim() || (email.html ? textoDeHtml(email.html) : "")).slice(0, MAX_CARACTERES_CORREO);
   const de = email.from?.name || email.from?.address || "";
@@ -146,6 +206,7 @@ async function leerEml(file: File): Promise<MaterialLeido> {
     `[Correo "${email.subject ?? file.name}"${de ? ` · de ${de}` : ""}${email.date ? ` · ${email.date.slice(0, 10)}` : ""}]\n${cuerpo}`,
   );
 
+  salida.notas.push(`Correo «${email.subject ?? file.name}»: leído.`);
   for (const adj of email.attachments ?? []) {
     if (!adj.filename && !adj.mimeType) continue;
     await procesarAdjunto(adj.filename ?? "adjunto", adj.mimeType ?? "", bytesDe(adj.content), salida);
@@ -158,7 +219,7 @@ async function leerMsg(file: File): Promise<MaterialLeido> {
   const { default: MsgReader } = await import("@kenjiuno/msgreader");
   const lector = new MsgReader(await file.arrayBuffer());
   const datos = lector.getFileData() as unknown as Record<string, unknown> & { attachments?: unknown[] };
-  const salida: MaterialLeido = { textos: [], binarios: [] };
+  const salida: MaterialLeido = { textos: [], binarios: [], notas: [], planillasLeidas: 0 };
 
   const asunto = typeof datos.subject === "string" ? datos.subject : file.name;
   const de = typeof datos.senderName === "string" ? datos.senderName : "";
@@ -173,6 +234,7 @@ async function leerMsg(file: File): Promise<MaterialLeido> {
     `[Correo "${asunto}"${de ? ` · de ${de}` : ""}${fecha ? ` · ${new Date(fecha).toISOString().slice(0, 10)}` : ""}]\n${cuerpo}`,
   );
 
+  salida.notas.push(`Correo «${asunto}»: leído.`);
   for (let i = 0; i < (datos.attachments?.length ?? 0); i++) {
     try {
       const adj = lector.getAttachment(i);
@@ -188,8 +250,17 @@ async function leerMsg(file: File): Promise<MaterialLeido> {
 
 /** Lee un correo (.eml o .msg) o una planilla (.xlsx o .csv) y todo lo que traiga. */
 export async function leerArchivoDeReporte(file: File): Promise<MaterialLeido> {
-  if (/\.eml$/i.test(file.name)) return leerEml(file);
-  if (/\.msg$/i.test(file.name)) return leerMsg(file);
-  if (/\.xlsx$/i.test(file.name)) return { textos: [await leerXlsx(file.name, file)], binarios: [] };
-  return { textos: [await leerCsv(file.name, file)], binarios: [] };
+  const vacio: MaterialLeido = { textos: [], binarios: [], notas: [], planillasLeidas: 0 };
+  try {
+    if (/\.eml$/i.test(file.name)) return await leerEml(file);
+    if (/\.msg$/i.test(file.name)) return await leerMsg(file);
+    const { texto, nota } = /\.xlsx$/i.test(file.name) ? await leerXlsx(file.name, file) : await leerCsv(file.name, file);
+    return { ...vacio, textos: [texto], notas: [nota], planillasLeidas: 1 };
+  } catch (err) {
+    const motivo = err instanceof Error ? err.message : "error desconocido";
+    const sugerencia = /\.xlsx$/i.test(file.name)
+      ? ' Prueba exportando la hoja "Conteo - Mes" a CSV y adjuntándola.'
+      : "";
+    return { ...vacio, notas: [`⚠ ${file.name}: no se pudo leer (${motivo}).${sugerencia}`] };
+  }
 }

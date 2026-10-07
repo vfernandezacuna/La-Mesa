@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { StickyNote, Paperclip } from "lucide-react";
+import { StickyNote, Paperclip, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWithFile } from "@/lib/claude-client";
 import {
@@ -167,7 +167,9 @@ export default function CriticalTopicsView({
 
   // ---------- composer ----------
   const [noteText, setNoteText] = useState("");
-  const [fileLabel, setFileLabel] = useState("");
+  const [archivos, setArchivos] = useState<File[]>([]);
+  const [arrastrando, setArrastrando] = useState(false);
+  const [lecturaNotas, setLecturaNotas] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [composing, setComposing] = useState(false);
   const [composeError, setComposeError] = useState<string | null>(null);
@@ -276,13 +278,22 @@ export default function CriticalTopicsView({
     await supabase.from("critical_topic_task_proposals").update({ status: "descartada" }).eq("id", p.id);
   }
 
+  // Los archivos se van sumando a la lista (varios clics o arrastrando varios a la vez).
+  function sumarArchivos(nuevos: File[]) {
+    setArchivos((prev) => {
+      const claves = new Set(prev.map((f) => `${f.name}|${f.size}`));
+      return [...prev, ...nuevos.filter((f) => !claves.has(`${f.name}|${f.size}`))];
+    });
+  }
+
   async function agregar() {
     if (!topic) return;
     const text = noteText.trim();
-    const files = Array.from(fileInputRef.current?.files ?? []);
+    const files = archivos;
     if (!text && !files.length) return;
     setComposing(true);
     setComposeError(null);
+    setLecturaNotas([]);
     setTasksAddedMsg(null);
     try {
       const kind: "note" | "material" = files.length ? "material" : "note";
@@ -290,6 +301,8 @@ export default function CriticalTopicsView({
       const bloques: string[] = text ? [text] : [];
       const reporte: string[] = [];
       const avisos: string[] = [];
+      const notas: string[] = [];
+      let planillasLeidas = 0;
       const binarios: AdjuntoBinario[] = [];
 
       for (const f of files) {
@@ -298,6 +311,8 @@ export default function CriticalTopicsView({
           const leido = await leerArchivoDeReporte(f);
           reporte.push(...leido.textos);
           avisos.push(...(leido.avisos ?? []));
+          notas.push(...leido.notas);
+          planillasLeidas += leido.planillasLeidas;
           binarios.push(...leido.binarios);
         } else if (isTextFile(f)) {
           bloques.push(await f.text());
@@ -323,6 +338,10 @@ export default function CriticalTopicsView({
         bloques.push(`[Extraído de ${b.name}]\n${extraido.trim()}`);
       }
       const contentText = bloques.join("\n\n");
+      if (!contentText.trim()) {
+        setLecturaNotas(notas);
+        throw new Error("sin contenido");
+      }
       const { data: entryData } = await supabase
         .from("critical_topic_entries")
         .insert({ topic_id: topic.id, kind, content_text: contentText, file_name: fileName })
@@ -332,14 +351,17 @@ export default function CriticalTopicsView({
       const allEntries = newEntry ? [...entries, newEntry] : entries;
       if (newEntry) setEntries(allEntries);
       setNoteText("");
-      setFileLabel("");
-      // el aviso del enlace solo vale si ninguna planilla se leyó en esta tanda
-      const hayPlanilla = reporte.some((t) => t.startsWith("[Planilla"));
-      if (avisos.length && !hayPlanilla) setComposeError(avisos[0]);
+      setArchivos([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      // el aviso del enlace solo vale si ninguna planilla se leyó en esta tanda
+      setLecturaNotas([...notas, ...(planillasLeidas === 0 ? avisos : [])]);
       void actualizarLectura(topic, allEntries);
-    } catch {
-      setComposeError("No se pudo agregar. Intenta nuevamente, o revisa que el archivo no sea demasiado pesado.");
+    } catch (err) {
+      setComposeError(
+        err instanceof Error && err.message === "sin contenido"
+          ? "No pude leer lo que adjuntaste; mira abajo el detalle de cada archivo."
+          : "No se pudo agregar. Intenta nuevamente, o revisa que el archivo no sea demasiado pesado.",
+      );
     }
     setComposing(false);
   }
@@ -435,7 +457,19 @@ export default function CriticalTopicsView({
               rows={3}
               onChange={(e) => setNoteText(e.target.value)}
             />
-            <div className="row" style={{ marginTop: 8, alignItems: "center" }}>
+            <div
+              className={`adj-zona ${arrastrando ? "on" : ""}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setArrastrando(true);
+              }}
+              onDragLeave={() => setArrastrando(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setArrastrando(false);
+                sumarArchivos(Array.from(e.dataTransfer.files));
+              }}
+            >
               <input
                 type="file"
                 ref={fileInputRef}
@@ -443,16 +477,40 @@ export default function CriticalTopicsView({
                 multiple
                 style={{ display: "none" }}
                 onChange={(e) => {
-                  const nombres = Array.from(e.target.files ?? []).map((f) => f.name);
-                  setFileLabel(nombres.length > 2 ? `${nombres.length} archivos` : nombres.join(", "));
+                  sumarArchivos(Array.from(e.target.files ?? []));
+                  e.target.value = "";
                 }}
               />
               <button className="ghost btn-icon btn-sm" onClick={() => fileInputRef.current?.click()}>
                 <Paperclip size={14} aria-hidden="true" />
-                Adjuntar
+                Adjuntar archivos
               </button>
-              {fileLabel && <span className="pdf-status" style={{ marginTop: 0 }}>{fileLabel}</span>}
-              <button className="btn-sm" onClick={() => void agregar()} disabled={composing} style={{ marginLeft: "auto" }}>
+              <span className="adj-hint">
+                {archivos.length
+                  ? "Puedes seguir sumando (correo + Excel, por ejemplo)."
+                  : "o arrástralos aquí, varios a la vez: correo, Excel, PDF…"}
+              </span>
+            </div>
+            {archivos.length > 0 && (
+              <div className="adj-lista">
+                {archivos.map((f) => (
+                  <span className="adj-chip" key={`${f.name}|${f.size}`}>
+                    <Paperclip size={12} aria-hidden="true" />
+                    {f.name}
+                    <span className="adj-peso">{f.size > 1048576 ? `${(f.size / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB`}</span>
+                    <button
+                      className="adj-x"
+                      aria-label={`Quitar ${f.name}`}
+                      onClick={() => setArchivos((prev) => prev.filter((x) => x !== f))}
+                    >
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="row" style={{ marginTop: 8, alignItems: "center", justifyContent: "flex-end" }}>
+              <button className="btn-sm" onClick={() => void agregar()} disabled={composing}>
                 Agregar
               </button>
             </div>
@@ -468,6 +526,14 @@ export default function CriticalTopicsView({
               </div>
             )}
             {composeError && <div className="empty-note">{composeError}</div>}
+            {lecturaNotas.length > 0 && (
+              <div className="adj-notas">
+                <b>Qué leí:</b>
+                {lecturaNotas.map((n, i) => (
+                  <div key={i}>{n}</div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="topic-card compact">
