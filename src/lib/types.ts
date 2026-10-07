@@ -167,63 +167,7 @@ export interface CriticalTopicEntry {
   kind: "note" | "material";
   content_text: string;
   file_name: string | null;
-  report: PmoReport | null;
   created_at: string;
-}
-
-export interface PmoKpi {
-  grupo: string;
-  nombre: string;
-  /** Valor tal como viene en el reporte ("84 de 120", "70%"). */
-  valor: string;
-  /** Valor numérico principal, para comparar semana a semana. */
-  numero: number | null;
-  unidad: string | null;
-}
-
-export interface PmoHito {
-  fecha: string | null;
-  texto: string;
-  responsable: string | null;
-}
-
-export interface PmoCritico {
-  texto: string;
-  /** De dónde sale: lo que el reporte dice literalmente. */
-  origen: string | null;
-}
-
-/** Un habilitante de la liberación de sitios de torre (PAS, restricciones, caminos, concesiones…). */
-export interface PmoHabilitante {
-  nombre: string;
-  /** Qué dice el reporte de este habilitante, en una frase. */
-  estado: string;
-  /** Cuántas estructuras o casos afecta, tal como viene ("362 estructuras"). */
-  cantidad: string | null;
-  /** Fecha estimada de liberación tal como viene ("junio de 2027"). */
-  fecha: string | null;
-  tramos: string | null;
-  /** Quién tiene que actuar o responde por este habilitante. */
-  responsable: string | null;
-  /** Lo que el reporte dice sobre si cambió: "se mantiene", "se actualizó", "nuevo". */
-  novedad: string | null;
-}
-
-/** Lo que la PMO le pide a un área. */
-export interface PmoAccion {
-  area: string;
-  texto: string;
-}
-
-export interface PmoReport {
-  fecha_reporte: string | null;
-  titular: string | null;
-  habilitantes?: PmoHabilitante[];
-  acciones?: PmoAccion[];
-  kpis: PmoKpi[];
-  highlights: string[];
-  criticos: PmoCritico[];
-  hitos: PmoHito[];
 }
 
 export interface CriticalTopicTaskProposal {

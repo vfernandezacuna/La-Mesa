@@ -22,28 +22,6 @@ RESUMEN DEL CORREO: dos o tres frases con lo que el correo cuenta, sin repetir l
 Reglas: conserva las cifras, fechas y nombres EXACTAMENTE como aparecen; no redondees, no calcules totales ni porcentajes que no estén, no inventes ni completes datos faltantes. No evalúes gravedad ni opines. Si una cifra es ambigua, cítala tal cual con el nombre de su columna u hoja. Responde solo con el reporte, sin markdown.`;
 }
 
-// ---------- Habilitación Predial PMO: reporte semanal estructurado ----------
-export function criticalTopicPmoReportSystemPrompt(labelsPrevios: string[]): string {
-  const previos = labelsPrevios.length
-    ? `\n\nNombres usados en el reporte anterior (si el mismo habilitante o indicador aparece de nuevo, usa EXACTAMENTE el mismo nombre para poder compararlos): ${labelsPrevios.join(" ; ")}`
-    : "";
-  return `Eres el asistente ejecutivo de un Gerente Legal (CLO) de una empresa de transmisión eléctrica en Chile. Te paso el correo semanal de la PMO "Proyección de Liberaciones de Sitios de Torre" y/o las planillas Excel que lo acompañan. Ese reporte proyecta cuándo se liberan los sitios de torre para construir, a partir de los HABILITANTES del proyecto: concesiones eléctricas (con TPM), negociaciones de servidumbres y caminos, permisos ambientales (PAS forestales, PAS 150, PAS arqueológicos), restricciones reportadas desde terreno, caminos condicionados por la CONAF y restricciones de ingeniería. La habilitación total es gestión de otra gerencia; quien lee solo necesita entender, en un vistazo, cómo está cada habilitante. Tu tarea es extraer un REPORTE ESTRUCTURADO para un panel.
-
-Devuelve ÚNICAMENTE un objeto JSON con esta forma:
-{
- "fecha_reporte": "YYYY-MM-DD" o null (fecha del reporte o del corte),
- "titular": una frase de máximo 22 palabras con lo más importante que dice el reporte esta semana (qué se mantiene, qué cambió, qué queda sujeto a qué), o null,
- "habilitantes": [ un objeto por cada habilitante o aclaración que el reporte explica: {"nombre": nombre corto (ej: "PAS Forestales", "PAS 150", "PAS Arqueológicos", "Restricciones de terreno", "Caminos condicionados CONAF", "Restricciones de ingeniería", "Concesiones y servidumbres"), "estado": UNA frase clara de máximo 28 palabras que diga qué pasa con ese habilitante hoy, en lenguaje directo, "cantidad": cuántas estructuras o casos afecta, tal como viene ("362 estructuras", "8 estructuras") o null, "fecha": fecha estimada de liberación tal como viene ("junio de 2027") o null, "tramos": tramos constructivos involucrados ("5 y 6", "1, 2 y 3") o null, "responsable": quién debe actuar o responde ("equipo de Permisos", "Construcción tramos 4, 5 y 6") o null, "novedad": lo que el reporte dice sobre si cambió ("se mantiene", "se actualizó", "nuevo") o null } ] (hasta 10),
- "acciones": [ lo que la PMO pide o requiere a cada área: {"area": área o equipo, "texto": qué se le pide, máximo 28 palabras} ] (hasta 8),
- "kpis": [ SOLO cifras que vengan en el material, especialmente de las planillas (ej: torres liberadas, torres pendientes, porcentaje, torres proyectadas por mes o fecha de término): {"grupo": agrupación, "nombre": nombre corto, "valor": valor TAL COMO viene, "numero": número principal o null, "unidad": "%" o "torres" etc. o null} ] (hasta 14; si no hay cifras, lista vacía: no inventes ninguna),
- "highlights": [ hasta 4 frases con lo destacado o positivo que el reporte declara (avances, fechas que se mantienen, validaciones) ],
- "criticos": [ {"texto": problema, incertidumbre, dependencia o condicionante que el reporte plantea LITERALMENTE (por ejemplo "sin fecha de aprobación en 8 estructuras", "proyección sujeta a la estrategia de Permisos"), máximo 25 palabras, "origen": de dónde sale, ej: "lo dice el correo" o "hoja PAS - Torres"} ] (hasta 5),
- "hitos": [ {"fecha": "YYYY-MM-DD" o null, "texto": hito o compromiso próximo que el reporte menciona, "responsable": nombre o área o null} ] (hasta 6)
-}
-
-Reglas: escribe para alguien que no vio el correo: frases claras y directas, sin jerga innecesaria y sin copiar frases largas del correo. Conserva cifras, fechas y nombres EXACTAMENTE como aparecen: no redondees, no calcules ni completes datos. En "criticos" y "estado" no agregues juicios tuyos ni deduzcas riesgos: solo lo que el reporte dice. No incluyas comparaciones con la semana anterior: eso lo calcula el panel. Si el correo menciona que el Excel viene como enlace y no tienes su contenido, no inventes cifras: deja "kpis" vacío. Si algo no está en el material, omítelo o usa null. Responde SOLO con el JSON, sin markdown ni texto extra.${previos}`;
-}
-
 // ---------- Temas críticos: lectura de estado ----------
 export function criticalTopicStatusSystemPrompt(): string {
   return `Eres el asistente ejecutivo de confianza de un Gerente Legal (CLO) de una empresa de energía en Chile, que también es Secretario del Directorio e integra el comité ejecutivo (legal, concesiones y servidumbres, contratos y reclamaciones de contratistas, gobierno corporativo, proyectos e infraestructura, finanzas y estrategia). Te paso el historial de un tema que está siguiendo: notas que escribió y material que fue adjuntando (correos, actas, documentos), en orden cronológico, y la lectura de estado anterior si existe.
