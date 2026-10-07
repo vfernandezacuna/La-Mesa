@@ -155,6 +155,7 @@ export interface CriticalTopic {
   title: string;
   status_summary: string | null;
   status_updated_at: string | null;
+  frentes: string[] | null;
   archived: boolean;
   created_at: string;
 }

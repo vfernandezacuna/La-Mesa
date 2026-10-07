@@ -701,6 +701,18 @@ button.seg:hover{background:var(--surface);color:var(--ink);transform:none;box-s
 button.seg.on{border-color:var(--ink);background:var(--surface);box-shadow:inset 0 0 0 1px var(--ink);}
 button.btn-icon{display:inline-flex;align-items:center;gap:7px;}
 
+/* CNX Tracker — estado por frente */
+.frentes{margin-bottom:18px;border:1px solid var(--hairline);border-radius:10px;background:var(--paper);padding:10px 16px 6px;}
+.frentes-head{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.frentes-lbl{font-size:0.64rem;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;color:var(--n600);}
+button.as-edit{font-size:0.74rem;padding:0 4px;display:inline-flex;align-items:center;gap:4px;min-height:0;}
+.frente-row{display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:4px 16px;padding:9px 0;border-top:1px solid var(--hairline);font-size:0.9rem;line-height:1.5;}
+.frente-row:first-of-type{border-top:none;}
+.frente-name{font-family:var(--font-heading);font-weight:600;}
+.frente-text{color:var(--ink);}
+.frente-text.vacio{color:var(--n600);font-style:italic;}
+@media(max-width:560px){.frente-row{grid-template-columns:1fr;}}
+
 /* CNX Tracker — qué cambió (lectura de estado) */
 .as-cambio{margin-top:10px;font-size:0.86rem;line-height:1.5;color:var(--n700);border-left:2px solid var(--hairline-strong);padding-left:12px;max-width:72ch;}
 .as-cambio-lbl{font-size:0.64rem;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;color:var(--azul-deep);margin-right:6px;}

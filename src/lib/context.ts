@@ -430,6 +430,7 @@ export function buildCriticalTopicContext(
   title: string,
   entries: CriticalTopicEntry[],
   lecturaPrevia?: string | null,
+  frentes?: string[] | null,
 ): string {
   const sorted = [...entries].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const omitidas = Math.max(0, sorted.length - HISTORIAL_MAX_ENTRADAS);
@@ -456,5 +457,8 @@ export function buildCriticalTopicContext(
     : omitidas > 0
       ? `\n\n(Se omiten las ${omitidas} entradas más antiguas del historial.)`
       : "";
-  return `Tema: ${title}${previa}\n\n--- HISTORIAL RECIENTE (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
+  const listaFrentes = frentes?.length
+    ? `\n\nFRENTES A REPORTAR (en este orden): ${frentes.join(" | ")}`
+    : "";
+  return `Tema: ${title}${listaFrentes}${previa}\n\n--- HISTORIAL RECIENTE (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
 }

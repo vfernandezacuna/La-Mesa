@@ -143,6 +143,20 @@ export default function CriticalTopicsView({
     setNewTitle("");
   }
 
+  async function guardarFrentes(t: CriticalTopic, frentes: string[]) {
+    const { data, error } = await supabase
+      .from("critical_topics")
+      .update({ frentes })
+      .eq("id", t.id)
+      .select()
+      .single();
+    if (error || !data) {
+      setComposeError("No se pudieron guardar los frentes. ¿Corriste la migración 0012?");
+      throw new Error("frentes");
+    }
+    setTopics((prev) => prev.map((x) => (x.id === t.id ? (data as CriticalTopic) : x)));
+  }
+
   // ---------- composer ----------
   const [noteText, setNoteText] = useState("");
   const [fileLabel, setFileLabel] = useState("");
@@ -156,8 +170,8 @@ export default function CriticalTopicsView({
     if (!allEntries.length) return;
     setStatusLoading(true);
     try {
-      const user = buildCriticalTopicContext(t.title, allEntries, t.status_summary) + appendProfile("", profile);
-      const raw = await askClaude(criticalTopicStatusSystemPrompt(), user, 1400);
+      const user = buildCriticalTopicContext(t.title, allEntries, t.status_summary, t.frentes) + appendProfile("", profile);
+      const raw = await askClaude(criticalTopicStatusSystemPrompt(), user, 1800);
       const { data } = await supabase
         .from("critical_topics")
         .update({ status_summary: raw.trim(), status_updated_at: new Date().toISOString() })
@@ -365,6 +379,8 @@ export default function CriticalTopicsView({
             canRefresh={entries.length > 0}
             loading={statusLoading}
             onRefresh={() => void actualizarLectura(topic, entries)}
+            frentes={topic.frentes ?? []}
+            onSaveFrentes={(f) => guardarFrentes(topic, f)}
           />
 
           <TareasPorHacer

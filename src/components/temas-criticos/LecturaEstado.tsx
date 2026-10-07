@@ -1,25 +1,33 @@
 "use client";
 
-import { ArrowRight, RefreshCw, TriangleAlert } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Pencil, RefreshCw, TriangleAlert } from "lucide-react";
 import { fechaCorta } from "@/lib/date";
+
+interface Frente {
+  name: string;
+  text: string;
+}
 
 interface Lectura {
   frase: string | null;
+  frentes: Frente[];
   situacion: string;
   cambio: string;
   riesgos: string[];
   pasos: string[];
 }
 
-type Seccion = "frase" | "situacion" | "cambio" | "riesgos" | "pasos";
+type Seccion = "frase" | "frentes" | "situacion" | "cambio" | "riesgos" | "pasos";
 
-const HEADER_RE = /^\s*(EN UNA FRASE|SITUACI[ÓO]N ACTUAL|QU[ÉE] CAMBI[ÓO]|RIESGOS(?: Y PENDIENTES| SEG[ÚU]N EL MATERIAL)?|PR[ÓO]XIMOS PASOS(?: QUE MENCIONA EL MATERIAL)?)\s*:\s*(.*)$/i;
+const HEADER_RE = /^\s*(EN UNA FRASE|ESTADO POR FRENTE|SITUACI[ÓO]N ACTUAL|QU[ÉE] CAMBI[ÓO]|RIESGOS(?: Y PENDIENTES| SEG[ÚU]N EL MATERIAL)?|PR[ÓO]XIMOS PASOS(?: QUE MENCIONA EL MATERIAL)?)\s*:\s*(.*)$/i;
 const BULLET_RE = /^\s*(?:[•\-–*]|\d+[.)])\s*/;
 
 // Acepta el formato nuevo (EN UNA FRASE / prosa) y el anterior (bullets con
 // RIESGOS Y PENDIENTES), para que las lecturas ya guardadas se sigan viendo.
 function parseLectura(text: string): Lectura {
   let frase: string | null = null;
+  const frentes: Frente[] = [];
   const situacion: string[] = [];
   const cambio: string[] = [];
   const riesgos: string[] = [];
@@ -33,7 +41,9 @@ function parseLectura(text: string): Lectura {
       const h = m[1].toUpperCase();
       seccion = h.startsWith("EN UNA")
         ? "frase"
-        : h.startsWith("SITUACI")
+        : h.startsWith("ESTADO")
+          ? "frentes"
+          : h.startsWith("SITUACI")
           ? "situacion"
           : h.startsWith("QU")
             ? "cambio"
@@ -45,12 +55,17 @@ function parseLectura(text: string): Lectura {
     const clean = line.replace(BULLET_RE, "").trim();
     if (!clean) continue;
     if (seccion === "frase") frase = frase ? `${frase} ${clean}` : clean;
+    else if (seccion === "frentes") {
+      const i = clean.indexOf(":");
+      if (i > 0 && i < 48) frentes.push({ name: clean.slice(0, i).trim(), text: clean.slice(i + 1).trim() });
+      else if (frentes.length) frentes[frentes.length - 1].text += ` ${clean}`;
+    }
     else if (seccion === "cambio") cambio.push(clean);
     else if (seccion === "riesgos") riesgos.push(clean);
     else if (seccion === "pasos") pasos.push(clean);
     else situacion.push(clean);
   }
-  return { frase, situacion: situacion.join(" "), cambio: cambio.join(" "), riesgos, pasos };
+  return { frase, frentes, situacion: situacion.join(" "), cambio: cambio.join(" "), riesgos, pasos };
 }
 
 function haceCuanto(iso: string): string {
@@ -67,7 +82,11 @@ export function LecturaEstado({
   canRefresh,
   loading,
   onRefresh,
+  frentes,
+  onSaveFrentes,
 }: {
+  frentes: string[];
+  onSaveFrentes: (frentes: string[]) => Promise<void>;
   text: string | null;
   color: string;
   updatedAt: string | null;
@@ -76,6 +95,30 @@ export function LecturaEstado({
   onRefresh: () => void;
 }) {
   const l = text ? parseLectura(text) : null;
+  const [editando, setEditando] = useState(false);
+  const [borrador, setBorrador] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  // Si la lectura aún no trae el estado de un frente, se muestra el nombre vacío.
+  const filas: Frente[] = frentes.map((name) => {
+    const clave = name.toLowerCase();
+    const hallado = l?.frentes.find((f) => f.name.toLowerCase() === clave);
+    return hallado ?? { name, text: "" };
+  });
+
+  async function guardarFrentes() {
+    setGuardando(true);
+    try {
+      const lista = borrador
+        .split(/[\n;,]/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+      await onSaveFrentes(lista);
+      setEditando(false);
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   return (
     <div className="topic-card" style={{ borderTopColor: color, borderTopWidth: 3 }}>
@@ -94,6 +137,56 @@ export function LecturaEstado({
             Actualizar lectura
           </button>
         )}
+      </div>
+
+
+      <div className="frentes">
+        <div className="frentes-head">
+          <span className="frentes-lbl">Estado por frente</span>
+          {!editando && (
+            <button
+              className="text-action as-edit"
+              onClick={() => {
+                setBorrador(frentes.join("\n"));
+                setEditando(true);
+              }}
+            >
+              <Pencil size={12} aria-hidden="true" /> {frentes.length ? "Editar frentes" : "Definir frentes"}
+            </button>
+          )}
+        </div>
+        {editando && (
+          <div style={{ marginBottom: 10 }}>
+            <textarea
+              rows={Math.max(3, frentes.length + 1)}
+              value={borrador}
+              onChange={(e) => setBorrador(e.target.value)}
+              placeholder="Un frente por línea — ej: GTA"
+            />
+            <div className="row" style={{ marginTop: 8 }}>
+              <button className="btn-sm" onClick={() => void guardarFrentes()} disabled={guardando}>
+                {guardando ? "Guardando…" : "Guardar"}
+              </button>
+              <button className="ghost btn-sm" onClick={() => setEditando(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+        {!editando && filas.length === 0 && (
+          <div className="empty-note">
+            Definí los contratos o líneas de trabajo de este tema y verás una línea de estado de cada uno.
+          </div>
+        )}
+        {!editando &&
+          filas.map((f) => (
+            <div className="frente-row" key={f.name}>
+              <span className="frente-name">{f.name}</span>
+              <span className={`frente-text ${f.text ? "" : "vacio"}`}>
+                {f.text || "Se completa al actualizar la lectura."}
+              </span>
+            </div>
+          ))}
       </div>
 
       {loading && (
