@@ -98,6 +98,7 @@ export function LecturaEstado({
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [errorFrentes, setErrorFrentes] = useState<string | null>(null);
 
   // Si la lectura aún no trae el estado de un frente, se muestra el nombre vacío.
   const filas: Frente[] = frentes.map((name) => {
@@ -108,6 +109,7 @@ export function LecturaEstado({
 
   async function guardarFrentes() {
     setGuardando(true);
+    setErrorFrentes(null);
     try {
       const lista = borrador
         .split(/[\n;,]/)
@@ -115,6 +117,8 @@ export function LecturaEstado({
         .filter(Boolean);
       await onSaveFrentes(lista);
       setEditando(false);
+    } catch {
+      setErrorFrentes("No se pudo guardar. Revisá que hayas corrido la migración 0012 en Supabase e intentá de nuevo.");
     } finally {
       setGuardando(false);
     }
@@ -163,6 +167,7 @@ export function LecturaEstado({
               onChange={(e) => setBorrador(e.target.value)}
               placeholder="Un frente por línea — ej: GTA"
             />
+            {errorFrentes && <div className="empty-note">{errorFrentes}</div>}
             <div className="row" style={{ marginTop: 8 }}>
               <button className="btn-sm" onClick={() => void guardarFrentes()} disabled={guardando}>
                 {guardando ? "Guardando…" : "Guardar"}
