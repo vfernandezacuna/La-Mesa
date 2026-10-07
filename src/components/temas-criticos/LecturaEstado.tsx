@@ -13,7 +13,7 @@ interface Lectura {
 
 type Seccion = "frase" | "situacion" | "cambio" | "riesgos" | "pasos";
 
-const HEADER_RE = /^\s*(EN UNA FRASE|SITUACI[ÓO]N ACTUAL|QU[ÉE] CAMBI[ÓO]|RIESGOS(?: Y PENDIENTES)?|PR[ÓO]XIMOS PASOS)\s*:\s*(.*)$/i;
+const HEADER_RE = /^\s*(EN UNA FRASE|SITUACI[ÓO]N ACTUAL|QU[ÉE] CAMBI[ÓO]|RIESGOS(?: Y PENDIENTES| SEG[ÚU]N EL MATERIAL)?|PR[ÓO]XIMOS PASOS(?: QUE MENCIONA EL MATERIAL)?)\s*:\s*(.*)$/i;
 const BULLET_RE = /^\s*(?:[•\-–*]|\d+[.)])\s*/;
 
 // Acepta el formato nuevo (EN UNA FRASE / prosa) y el anterior (bullets con
@@ -129,7 +129,7 @@ export function LecturaEstado({
                 <div className="lect-col riesgos">
                   <div className="lect-col-head">
                     <TriangleAlert size={15} aria-hidden="true" />
-                    Riesgos
+                    Riesgos según el material
                   </div>
                   {l.riesgos.map((r, i) => (
                     <div className="lect-item" key={i}>
@@ -143,7 +143,7 @@ export function LecturaEstado({
                 <div className="lect-col pasos">
                   <div className="lect-col-head">
                     <ArrowRight size={15} aria-hidden="true" />
-                    Próximos pasos
+                    Próximos pasos que menciona el material
                   </div>
                   {l.pasos.map((p, i) => (
                     <div className="lect-item" key={i}>

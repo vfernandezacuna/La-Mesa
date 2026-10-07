@@ -6,22 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWithFile } from "@/lib/claude-client";
 import {
   criticalTopicFileExtractionSystemPrompt,
-  criticalTopicItemsSystemPrompt,
   criticalTopicStatusSystemPrompt,
   criticalTopicTasksSystemPrompt,
 } from "@/lib/prompts";
-import { appendProfile, buildCriticalTopicContext, buildCriticalTopicItemsContext } from "@/lib/context";
+import { appendProfile, buildCriticalTopicContext } from "@/lib/context";
 import { fechaCorta, ymd } from "@/lib/date";
-import { sanitizeResumenes, type ResumenAsunto } from "@/lib/asuntos";
-import type {
-  CriticalTopic,
-  CriticalTopicEntry,
-  CriticalTopicItem,
-  CriticalTopicItemSummary,
-  CriticalTopicTaskProposal,
-  TaskPriority,
-} from "@/lib/types";
-import { AsuntosCard, MovimientoReciente } from "./Asuntos";
+import type { CriticalTopic, CriticalTopicEntry, CriticalTopicTaskProposal, TaskPriority } from "@/lib/types";
 import { LecturaEstado } from "./LecturaEstado";
 import { TareasPorHacer, type TaskChoice } from "./TareasPorHacer";
 
@@ -86,14 +76,10 @@ function isTextFile(file: File): boolean {
 
 export default function CriticalTopicsView({
   initialTopics,
-  initialItems,
-  initialSummaries,
   initialTaskProposals,
   profile,
 }: {
   initialTopics: CriticalTopic[];
-  initialItems: CriticalTopicItem[];
-  initialSummaries: CriticalTopicItemSummary[];
   initialTaskProposals: CriticalTopicTaskProposal[];
   profile: string;
 }) {
@@ -102,10 +88,6 @@ export default function CriticalTopicsView({
   const [topics, setTopics] = useState<CriticalTopic[]>(initialTopics);
   const [selectedId, setSelectedId] = useState<string | null>(initialTopics[0]?.id ?? null);
   const [newTitle, setNewTitle] = useState("");
-
-  const [items, setItems] = useState<CriticalTopicItem[]>(initialItems);
-  const [summaries, setSummaries] = useState<CriticalTopicItemSummary[]>(initialSummaries);
-  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
   const [entries, setEntries] = useState<CriticalTopicEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
@@ -161,122 +143,6 @@ export default function CriticalTopicsView({
     setNewTitle("");
   }
 
-  // ---------- asuntos ----------
-  const topicItems = items.filter((i) => i.topic_id === selectedId);
-  const [summarizing, setSummarizing] = useState(false);
-  const [itemsMsg, setItemsMsg] = useState<string | null>(null);
-
-  function selectTopic(id: string) {
-    setSelectedId(id);
-    setExpandedItemId(null);
-    setItemsMsg(null);
-  }
-
-  function abrirAsunto(item: CriticalTopicItem) {
-    if (item.topic_id !== selectedId) selectTopic(item.topic_id);
-    setExpandedItemId(item.id);
-    setTimeout(() => {
-      document.getElementById(`asunto-${item.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 80);
-  }
-
-  async function guardarResumen(item: CriticalTopicItem, r: ResumenAsunto, sourceEntryId: string | null) {
-    const ahora = new Date().toISOString();
-    const { data, error } = await supabase
-      .from("critical_topic_items")
-      .update({ resumen: r.resumen, resumen_updated_at: ahora, updated_at: ahora })
-      .eq("id", item.id)
-      .select()
-      .single();
-    if (error || !data) throw new Error(error?.message ?? "update failed");
-    setItems((prev) => prev.map((x) => (x.id === item.id ? (data as CriticalTopicItem) : x)));
-    const { data: reg } = await supabase
-      .from("critical_topic_item_summaries")
-      .insert({ item_id: item.id, resumen: r.resumen, cambio: r.cambio, source_entry_id: sourceEntryId })
-      .select()
-      .single();
-    if (reg) setSummaries((prev) => [...prev, reg as CriticalTopicItemSummary]);
-  }
-
-  // material: la nota nueva (solo toca los asuntos que menciona) o el historial
-  // completo del tema. Resume sin evaluar nada; cada resumen queda en el registro.
-  async function resumirAsuntos(
-    t: CriticalTopic,
-    material: string,
-    sourceEntryId: string | null,
-    completo: boolean,
-    soloItem?: CriticalTopicItem,
-  ) {
-    const tItems = items.filter((i) => i.topic_id === t.id);
-    if (!tItems.length) return;
-    setSummarizing(true);
-    setItemsMsg(null);
-    try {
-      const asuntos = buildCriticalTopicItemsContext(tItems, true);
-      const foco = soloItem ? `\n\nResume SOLO el asunto «${soloItem.name}» (id=${soloItem.id}).` : "";
-      const user = completo
-        ? `${asuntos}${foco}\n\nResume los asuntos usando el historial del tema:\n\n${material}`
-        : `Tema: ${t.title}\n\n${asuntos}\n\n--- NOTA O MATERIAL NUEVO ---\n${material}`;
-      const raw = await askClaude(criticalTopicItemsSystemPrompt(ymd(new Date())), user, 3000, "low");
-      let validos = sanitizeResumenes(JSON.parse(raw.replace(/```json|```/g, "").trim()), tItems);
-      if (soloItem) validos = validos.filter((v) => v.item_id === soloItem.id);
-      if (!validos.length) {
-        if (completo) setItemsMsg("No encontré información suficiente en el historial para resumir.");
-      } else {
-        for (const v of validos) {
-          const item = tItems.find((x) => x.id === v.item_id);
-          if (item) await guardarResumen(item, v, sourceEntryId);
-        }
-      }
-    } catch {
-      setItemsMsg("No se pudo resumir los asuntos. ¿Corriste la migración 0012? Si ya la corriste, intentá de nuevo.");
-    }
-    setSummarizing(false);
-  }
-
-  async function guardarFicha(item: CriticalTopicItem, ficha: string) {
-    const { data, error } = await supabase
-      .from("critical_topic_items")
-      .update({ ficha: ficha || null })
-      .eq("id", item.id)
-      .select()
-      .single();
-    if (error || !data) {
-      setItemsMsg("No se pudo guardar la ficha. ¿Corriste la migración 0012?");
-      throw new Error("ficha");
-    }
-    setItems((prev) => prev.map((x) => (x.id === item.id ? (data as CriticalTopicItem) : x)));
-  }
-
-  // Una corrección se anota en la ficha, que Claude lee como verdad base.
-  async function anotarCorreccion(item: CriticalTopicItem, texto: string) {
-    const nota = `Corrección (${fechaCorta(ymd(new Date()))}): ${texto}`;
-    await guardarFicha(item, item.ficha ? `${item.ficha}\n${nota}` : nota);
-  }
-
-  async function crearAsunto(name: string) {
-    if (!selectedId) return;
-    const maxOrder = topicItems.reduce((m, i) => Math.max(m, i.sort_order), 0);
-    const { data } = await supabase
-      .from("critical_topic_items")
-      .insert({ topic_id: selectedId, name, sort_order: maxOrder + 1 })
-      .select()
-      .single();
-    if (data) setItems((prev) => [...prev, data as CriticalTopicItem]);
-    else setItemsMsg("No se pudo crear el asunto.");
-  }
-
-  async function eliminarAsunto(item: CriticalTopicItem) {
-    const { error } = await supabase.from("critical_topic_items").delete().eq("id", item.id);
-    if (error) {
-      setItemsMsg("No se pudo eliminar el asunto.");
-      return;
-    }
-    setItems((prev) => prev.filter((x) => x.id !== item.id));
-    setSummaries((prev) => prev.filter((s) => s.item_id !== item.id));
-    setExpandedItemId(null);
-  }
-
   // ---------- composer ----------
   const [noteText, setNoteText] = useState("");
   const [fileLabel, setFileLabel] = useState("");
@@ -290,8 +156,7 @@ export default function CriticalTopicsView({
     if (!allEntries.length) return;
     setStatusLoading(true);
     try {
-      const tItems = items.filter((i) => i.topic_id === t.id);
-      const user = buildCriticalTopicContext(t.title, allEntries, tItems, t.status_summary) + appendProfile("", profile);
+      const user = buildCriticalTopicContext(t.title, allEntries, t.status_summary) + appendProfile("", profile);
       const raw = await askClaude(criticalTopicStatusSystemPrompt(), user, 1400);
       const { data } = await supabase
         .from("critical_topics")
@@ -432,7 +297,6 @@ export default function CriticalTopicsView({
       setFileLabel("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       void actualizarLectura(topic, allEntries);
-      void resumirAsuntos(topic, contentText, newEntry?.id ?? null, false);
     } catch {
       setComposeError("No se pudo agregar. Intenta nuevamente, o revisa que el archivo no sea demasiado pesado.");
     }
@@ -446,17 +310,9 @@ export default function CriticalTopicsView({
     <>
       <h1 className="page-title">CNX Tracker</h1>
       <div className="page-sub">
-        Los temas estratégicos de Conexión Energía que seguís de cerca. Mandale notas o material y te resume cada
-        asunto y cómo va avanzando, sin evaluar nada por vos.
+        Los temas estratégicos de Conexión Energía que seguís de cerca. Mandale notas o material y te mantiene la
+        lectura de estado al día, con lo que dice el material y cómo cambió.
       </div>
-
-      <MovimientoReciente
-        topics={topics}
-        items={items}
-        summaries={summaries}
-        colorOf={(id) => topicColor(topics, id)}
-        onOpen={abrirAsunto}
-      />
 
       <div className="topic-pills">
         {topics.map((t) => {
@@ -471,7 +327,7 @@ export default function CriticalTopicsView({
                   ? { borderColor: c, color: c, background: `color-mix(in srgb, ${c} 12%, var(--paper))` }
                   : { borderColor: `color-mix(in srgb, ${c} 45%, var(--hairline-strong))` }
               }
-              onClick={() => selectTopic(t.id)}
+              onClick={() => setSelectedId(t.id)}
             >
               <span className="topic-pill-dot" style={{ background: c }} />
               {t.title}
@@ -502,27 +358,6 @@ export default function CriticalTopicsView({
         <div className="empty-note">Creá tu primer tema arriba para empezar a seguirle la pista.</div>
       ) : (
         <>
-          <AsuntosCard
-            color={color}
-            items={topicItems}
-            summaries={summaries}
-            expandedId={expandedItemId}
-            canSummarize={entries.length > 0}
-            summarizing={summarizing}
-            message={itemsMsg}
-            onToggle={(id) => setExpandedItemId((prev) => (prev === id ? null : id))}
-            onSummarizeAll={() =>
-              void resumirAsuntos(topic, buildCriticalTopicContext(topic.title, entries, [], topic.status_summary), null, true)
-            }
-            onSummarizeOne={(it) =>
-              void resumirAsuntos(topic, buildCriticalTopicContext(topic.title, entries, [], topic.status_summary), null, true, it)
-            }
-            onSaveFicha={guardarFicha}
-            onCorrect={anotarCorreccion}
-            onDelete={(it) => void eliminarAsunto(it)}
-            onCreate={(name) => void crearAsunto(name)}
-          />
-
           <LecturaEstado
             text={topic.status_summary}
             color={color}
@@ -541,7 +376,7 @@ export default function CriticalTopicsView({
             onPropose={() =>
               void proponerTareas(
                 topic,
-                `${topic.status_summary ? `LECTURA DE ESTADO ACTUAL:\n${topic.status_summary}\n\n` : ""}${buildCriticalTopicContext(topic.title, entries, topicItems)}`,
+                `${topic.status_summary ? `LECTURA DE ESTADO ACTUAL:\n${topic.status_summary}\n\n` : ""}${buildCriticalTopicContext(topic.title, entries)}`,
                 null,
               )
             }

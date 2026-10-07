@@ -183,51 +183,6 @@ export interface CriticalTopicTaskProposal {
   created_at: string;
 }
 
-export type Criticidad = 1 | 2 | 3 | 4;
-export type Tendencia = "mejora" | "estable" | "empeora";
-
-export interface CriticalTopicItem {
-  id: string;
-  topic_id: string;
-  user_id: string;
-  name: string;
-  descripcion: string | null;
-  criticidad: Criticidad | null;
-  avance: number | null;
-  tendencia: Tendencia | null;
-  estado: string | null;
-  proximo_hito: string | null;
-  proximo_hito_fecha: string | null;
-  ficha: string | null;
-  resumen: string | null;
-  resumen_updated_at: string | null;
-  sort_order: number;
-  updated_at: string | null;
-  created_at: string;
-}
-
-export interface CriticalTopicItemSummary {
-  id: string;
-  item_id: string;
-  user_id: string;
-  resumen: string;
-  cambio: string | null;
-  source_entry_id: string | null;
-  created_at: string;
-}
-
-export interface CriticalTopicItemSnapshot {
-  id: string;
-  item_id: string;
-  user_id: string;
-  criticidad: Criticidad;
-  avance: number;
-  tendencia: Tendencia;
-  estado: string | null;
-  source_entry_id: string | null;
-  created_at: string;
-}
-
 export interface InvestmentAccount {
   id: string;
   user_id: string;

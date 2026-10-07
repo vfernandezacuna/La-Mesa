@@ -5,7 +5,6 @@ import { PROFILE_DEFAULT } from "./profile-default";
 import type {
   Checkin,
   CriticalTopicEntry,
-  CriticalTopicItem,
   Habit,
   HabitLog,
   InvestmentAccount,
@@ -430,7 +429,6 @@ const ENTRADA_MAX_CARACTERES = 6000;
 export function buildCriticalTopicContext(
   title: string,
   entries: CriticalTopicEntry[],
-  items: CriticalTopicItem[] = [],
   lecturaPrevia?: string | null,
 ): string {
   const sorted = [...entries].sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -449,26 +447,14 @@ export function buildCriticalTopicContext(
         : e.content_text;
     return `[${fecha} · ${etiqueta}]\n${texto}`;
   });
-  const asuntos = items.length ? `\n\n${buildCriticalTopicItemsContext(items, false)}` : "";
-  const antes =
-    omitidas > 0
-      ? `\n\n(Se omiten las ${omitidas} entradas más antiguas del historial.${
-          lecturaPrevia ? ` Así las resumía la lectura de estado anterior:\n${lecturaPrevia}` : ""
-        })`
+  // La lectura anterior se manda siempre: sirve para comparar avance y detectar
+  // estancamiento, y resume las entradas antiguas que se omiten.
+  const previa = lecturaPrevia
+    ? `\n\n--- LECTURA DE ESTADO ANTERIOR (para comparar avance y detectar estancamiento${
+        omitidas > 0 ? `; también resume las ${omitidas} entradas más antiguas que se omiten del historial` : ""
+      }) ---\n${lecturaPrevia}\n--- FIN DE LA LECTURA ANTERIOR ---`
+    : omitidas > 0
+      ? `\n\n(Se omiten las ${omitidas} entradas más antiguas del historial.)`
       : "";
-  return `Tema: ${title}${asuntos}${antes}\n\n--- HISTORIAL RECIENTE (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
-}
-
-// Asuntos de un tema con su ficha (verdad base) y su resumen anterior. Con ids
-// cuando la IA tiene que devolver resúmenes referenciándolos.
-export function buildCriticalTopicItemsContext(items: CriticalTopicItem[], withIds: boolean): string {
-  const lines = items.map((it) => {
-    const parts: string[] = [];
-    if (withIds) parts.push(`id=${it.id}`);
-    parts.push(it.descripcion ? `${it.name} (${it.descripcion})` : it.name);
-    if (it.ficha) parts.push(`FICHA: ${it.ficha}`);
-    if (it.resumen) parts.push(`resumen anterior: ${it.resumen}`);
-    return `• ${parts.join(" · ")}`;
-  });
-  return `--- ASUNTOS DEL TEMA (la ficha es la verdad base) ---\n${lines.join("\n")}\n--- FIN DE ASUNTOS ---`;
+  return `Tema: ${title}${previa}\n\n--- HISTORIAL RECIENTE (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
 }
