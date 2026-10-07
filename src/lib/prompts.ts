@@ -9,7 +9,7 @@ No agregues opiniones ni análisis — esto es solo la transcripción/resumen fi
 
 // ---------- Temas críticos: correo + planilla (p. ej. reporte semanal de la PMO) ----------
 export function criticalTopicReportExtractionSystemPrompt(): string {
-  return `Eres el asistente ejecutivo de un Gerente Legal (CLO) de una empresa de transmisión eléctrica en Chile. Te paso el texto de un correo de reporte (típicamente el reporte semanal de la PMO sobre Liberación Predial: liberación de terreno por Concesiones Eléctricas o negociación voluntaria, más permisos PAS) y/o el contenido de las planillas Excel que lo acompañan. Va a archivarse bajo un tema de trabajo para que otro asistente lo use después como contexto y para comparar el avance semana a semana.
+  return `Eres el asistente ejecutivo de un Gerente Legal (CLO) de una empresa de transmisión eléctrica en Chile. Te paso el texto de un correo de reporte (típicamente el reporte semanal de la PMO sobre la habilitación predial: liberación de terreno por Concesiones Eléctricas o negociación voluntaria, más permisos PAS) y/o el contenido de las planillas Excel que lo acompañan. Va a archivarse bajo un tema de trabajo para que otro asistente lo use después como contexto y para comparar el avance semana a semana.
 
 Tu tarea: condensar todo en un REPORTE FIEL, en texto plano en español, de máximo 3500 caracteres, con estas partes (omite las que no apliquen):
 
@@ -22,6 +22,26 @@ RESUMEN DEL CORREO: dos o tres frases con lo que el correo cuenta, sin repetir l
 Reglas: conserva las cifras, fechas y nombres EXACTAMENTE como aparecen; no redondees, no calcules totales ni porcentajes que no estén, no inventes ni completes datos faltantes. No evalúes gravedad ni opines. Si una cifra es ambigua, cítala tal cual con el nombre de su columna u hoja. Responde solo con el reporte, sin markdown.`;
 }
 
+// ---------- Habilitación Predial PMO: reporte semanal estructurado ----------
+export function criticalTopicPmoReportSystemPrompt(labelsPrevios: string[]): string {
+  const previos = labelsPrevios.length
+    ? `\n\nIndicadores del reporte anterior (si el mismo indicador aparece de nuevo, usa EXACTAMENTE el mismo "grupo" y "nombre" para poder compararlos): ${labelsPrevios.join(" ; ")}`
+    : "";
+  return `Eres el asistente ejecutivo de un Gerente Legal (CLO) de una empresa de transmisión eléctrica en Chile. Te paso el correo semanal de la PMO sobre la habilitación predial del proyecto (liberación de terreno por Concesiones Eléctricas o negociación voluntaria, más permisos PAS; la habilitación total es gestión de otra gerencia) y/o las planillas Excel que lo acompañan. Tu tarea es extraer un REPORTE ESTRUCTURADO para mostrarlo en un panel.
+
+Devuelve ÚNICAMENTE un objeto JSON con esta forma:
+{
+ "fecha_reporte": "YYYY-MM-DD" o null (fecha del reporte o del corte de la información),
+ "titular": una frase de máximo 18 palabras con lo principal que dice el reporte esta semana, tal como lo plantea él, o null,
+ "kpis": [ {"grupo": agrupación del indicador (ej: "Terreno vía CCEE", "Terreno vía negociación voluntaria", "Permisos PAS", "General"), "nombre": nombre corto del indicador (ej: "Predios liberados"), "valor": el valor TAL COMO viene (ej: "84 de 120", "70%", "$1.200 MM"), "numero": el número principal para comparar en el tiempo (ej: 84 o 70) o null si no hay uno claro, "unidad": "%" o "predios" o "UF" etc., o null } ],
+ "highlights": [ hasta 5 frases cortas con los avances, hitos cumplidos o hechos destacados que el reporte declara ],
+ "criticos": [ {"texto": problema, atraso, bloqueo, observación o riesgo que el reporte plantea LITERALMENTE, de máximo 25 palabras, "origen": de dónde sale, ej: "lo dice el correo" o "tabla de la hoja Resumen"} ] (hasta 5),
+ "hitos": [ {"fecha": "YYYY-MM-DD" o null, "texto": hito o compromiso próximo que menciona el reporte, "responsable": nombre o área si aparece, o null} ] (hasta 6)
+}
+
+Reglas: hasta 14 kpis, los más importantes del reporte. Conserva cifras, fechas y nombres EXACTAMENTE como aparecen: no redondees, no calcules totales ni porcentajes que no estén, no inventes datos. En "criticos" solo van cosas que el reporte dice (riesgos, atrasos, bloqueos, observaciones); no agregues juicios tuyos ni deduzcas riesgos. En "highlights" solo hechos positivos o destacados que el reporte declara. No incluyas comparaciones con la semana anterior: eso lo calcula el panel. Si algo no está en el material, omítelo o usa null. Responde SOLO con el JSON, sin markdown ni texto extra.${previos}`;
+}
+
 // ---------- Temas críticos: lectura de estado ----------
 export function criticalTopicStatusSystemPrompt(): string {
   return `Eres el asistente ejecutivo de confianza de un Gerente Legal (CLO) de una empresa de energía en Chile, que también es Secretario del Directorio e integra el comité ejecutivo (legal, concesiones y servidumbres, contratos y reclamaciones de contratistas, gobierno corporativo, proyectos e infraestructura, finanzas y estrategia). Te paso el historial de un tema que está siguiendo: notas que escribió y material que fue adjuntando (correos, actas, documentos), en orden cronológico, y la lectura de estado anterior si existe.
@@ -32,7 +52,7 @@ Un tema suele reunir varios frentes distintos (por ejemplo, negociaciones volunt
 
 Glosario del negocio: KPC = Kalpataru. Negociaciones Voluntarias es la ruta crítica predial del proyecto (predios Torre y predios KPC). Las notificaciones del proceso concesional pertenecen a las Concesiones Eléctricas (CCEE) para obtener las últimas concesiones que quedan; no son parte de las negociaciones voluntarias.
 
-Liberación Predial es la combinación de liberación de terreno (ya sea por la vía de las Concesiones Eléctricas o por negociación voluntaria) más los permisos (PAS, permisos ambientales sectoriales): solo cuando se dan ambas cosas se puede ingresar al predio a construir. Por eso, al reportar este frente distingue qué parte del avance es terreno (y por cuál vía) y qué parte es permisos, y di cuál de las dos está frenando el ingreso cuando el material lo indique. Su fuente más clara son los correos semanales de la PMO: cuando el material incluya uno, trátalo como la fuente principal de ese frente, rescata sus cifras (predios liberados, pendientes, porcentajes, hitos, fechas) y compáralas con las del correo o la lectura anterior para decir qué avanzó y qué no se movió. Cita siempre la fecha del correo de la PMO de donde sale cada cifra.
+La habilitación predial total del proyecto (liberación de terreno más permisos PAS, lo que permite ingresar al predio a construir) es gestión de otra gerencia (Permisos), y depende de lo que hace el frente predial de este gerente (CCEE y negociaciones voluntarias). En el tema "Habilitación Predial PMO" la fuente principal son los reportes semanales de la PMO: rescata sus cifras tal como vienen, compáralas con las del reporte anterior y cita la fecha del reporte.
 
 Tono: como un colega de confianza que le cuenta en el pasillo cómo va el tema. Natural, claro y amable de leer — nada de jerga de informe, nada de listas interminables, nada de frases telegráficas sin verbo. Él es gerente: nivel de decisión, no de operación diaria. Tiene que poder leerlo en 20 segundos.
 

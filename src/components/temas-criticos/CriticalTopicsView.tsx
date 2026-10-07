@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWithFile } from "@/lib/claude-client";
 import {
   criticalTopicFileExtractionSystemPrompt,
+  criticalTopicPmoReportSystemPrompt,
   criticalTopicReportExtractionSystemPrompt,
   criticalTopicStatusSystemPrompt,
   criticalTopicTasksSystemPrompt,
@@ -19,7 +20,10 @@ import {
   type AdjuntoBinario,
 } from "@/lib/material-files";
 import type { CriticalTopic, CriticalTopicEntry, CriticalTopicTaskProposal, TaskPriority } from "@/lib/types";
+import { formatPmoReport, reportesPmo, sanitizePmoReport } from "@/lib/pmo";
+import type { PmoReport } from "@/lib/types";
 import { LecturaEstado } from "./LecturaEstado";
+import { PanelPMO } from "./PanelPMO";
 import { TareasPorHacer, type TaskChoice } from "./TareasPorHacer";
 
 interface ProposedTask {
@@ -303,14 +307,26 @@ export default function CriticalTopicsView({
         }
       }
 
+      let reportePmo: PmoReport | null = null;
       if (reporte.length) {
-        const extraido = await askClaude(
-          criticalTopicReportExtractionSystemPrompt(),
-          reporte.join("\n\n").slice(0, 60000) + (text ? `\n\nNota de quien lo adjunta: ${text}` : ""),
-          2500,
-          "low",
-        );
-        bloques.push(`[Reporte extraído de ${files.map((f) => f.name).join(", ")}]\n${extraido.trim()}`);
+        const crudo = reporte.join("\n\n").slice(0, 60000) + (text ? `\n\nNota de quien lo adjunta: ${text}` : "");
+        const nombres = files.map((f) => f.name).join(", ");
+        if (/pmo/i.test(topic.title)) {
+          // Tema de la PMO: reporte estructurado para el panel (cifras, highlights, críticos, hitos)
+          const previos = (reportesPmo(entries)[0]?.report.kpis ?? []).map((k) => `${k.grupo} · ${k.nombre}`);
+          try {
+            const raw = await askClaude(criticalTopicPmoReportSystemPrompt(previos), crudo, 3500, "low");
+            const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+            reportePmo = sanitizePmoReport(JSON.parse(json));
+          } catch {
+            reportePmo = null;
+          }
+          if (reportePmo) bloques.push(`[Reporte PMO extraído de ${nombres}]\n${formatPmoReport(reportePmo)}`);
+        }
+        if (!reportePmo) {
+          const extraido = await askClaude(criticalTopicReportExtractionSystemPrompt(), crudo, 2500, "low");
+          bloques.push(`[Reporte extraído de ${nombres}]\n${extraido.trim()}`);
+        }
       }
       for (const b of binarios) {
         const extraido = await askClaudeWithFile(
@@ -323,11 +339,21 @@ export default function CriticalTopicsView({
         bloques.push(`[Extraído de ${b.name}]\n${extraido.trim()}`);
       }
       const contentText = bloques.join("\n\n");
-      const { data: entryData } = await supabase
+      const primero = await supabase
         .from("critical_topic_entries")
-        .insert({ topic_id: topic.id, kind, content_text: contentText, file_name: fileName })
+        .insert({ topic_id: topic.id, kind, content_text: contentText, file_name: fileName, report: reportePmo })
         .select()
         .single();
+      let entryData = primero.data;
+      if (primero.error && reportePmo) {
+        // sin la columna del reporte (migración 0013 pendiente): se guarda igual como texto
+        ({ data: entryData } = await supabase
+          .from("critical_topic_entries")
+          .insert({ topic_id: topic.id, kind, content_text: contentText, file_name: fileName })
+          .select()
+          .single());
+        setComposeError("Se guardó el reporte como texto, pero falta correr la migración 0013 para ver el panel.");
+      }
       const newEntry = entryData as CriticalTopicEntry | null;
       const allEntries = newEntry ? [...entries, newEntry] : entries;
       if (newEntry) setEntries(allEntries);
@@ -396,6 +422,8 @@ export default function CriticalTopicsView({
         <div className="empty-note">Creá tu primer tema arriba para empezar a seguirle la pista.</div>
       ) : (
         <>
+          <PanelPMO reportes={reportesPmo(entries)} color={color} />
+
           <LecturaEstado
             text={topic.status_summary}
             color={color}
