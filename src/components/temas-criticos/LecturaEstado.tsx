@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Pencil, RefreshCw, TriangleAlert } from "lucide-react";
+import { ArrowRight, Pencil, RefreshCw, Target, TrendingUp, TriangleAlert } from "lucide-react";
 import { fechaCorta } from "@/lib/date";
 
 interface Frente {
@@ -16,15 +16,30 @@ interface Lectura {
   cambio: string;
   riesgos: string[];
   pasos: string[];
+  proyeccion: string[];
+  cumplimiento: string[];
+  alertas: string[];
 }
 
-type Seccion = "frase" | "frentes" | "situacion" | "cambio" | "riesgos" | "pasos";
+type Seccion = "frase" | "frentes" | "situacion" | "cambio" | "riesgos" | "pasos" | "proyeccion" | "cumplimiento" | "alertas";
 
-const HEADER_RE = /^\s*(EN UNA FRASE|ESTADO POR FRENTE|SITUACI[ÓO]N ACTUAL|QU[ÉE] CAMBI[ÓO]|RIESGOS(?: Y PENDIENTES| SEG[ÚU]N EL MATERIAL)?|PR[ÓO]XIMOS PASOS(?: QUE MENCIONA EL MATERIAL)?)\s*:\s*(.*)$/i;
+const HEADER_RE = /^\s*(EN UNA FRASE|ESTADO POR FRENTE|PROYECCI[ÓO]N DE LIBERACI[ÓO]N SEMANAL|CU[ÁA]NTO SE CUMPLI[ÓO] REALMENTE|ALERTAS Y TEMAS CR[ÍI]TICOS|SITUACI[ÓO]N ACTUAL|QU[ÉE] CAMBI[ÓO]|RIESGOS(?: Y PENDIENTES| SEG[ÚU]N EL MATERIAL)?|PR[ÓO]XIMOS PASOS(?: QUE MENCIONA EL MATERIAL)?)\s*:\s*(.*)$/i;
 const BULLET_RE = /^\s*(?:[•\-–*]|\d+[.)])\s*/;
 
 // Acepta el formato nuevo (EN UNA FRASE / prosa) y el anterior (bullets con
 // RIESGOS Y PENDIENTES), para que las lecturas ya guardadas se sigan viendo.
+function seccionDe(h: string): Seccion {
+  if (h.startsWith("EN UNA")) return "frase";
+  if (h.startsWith("ESTADO")) return "frentes";
+  if (h.startsWith("PROYECCI")) return "proyeccion";
+  if (h.startsWith("CU")) return "cumplimiento";
+  if (h.startsWith("ALERTAS")) return "alertas";
+  if (h.startsWith("SITUACI")) return "situacion";
+  if (h.startsWith("QU")) return "cambio";
+  if (h.startsWith("RIESGO")) return "riesgos";
+  return "pasos";
+}
+
 function parseLectura(text: string): Lectura {
   let frase: string | null = null;
   const frentes: Frente[] = [];
@@ -32,6 +47,9 @@ function parseLectura(text: string): Lectura {
   const cambio: string[] = [];
   const riesgos: string[] = [];
   const pasos: string[] = [];
+  const proyeccion: string[] = [];
+  const cumplimiento: string[] = [];
+  const alertas: string[] = [];
   let seccion: Seccion | null = null;
 
   for (const raw of text.replace(/\*\*/g, "").split(/\n/)) {
@@ -39,17 +57,7 @@ function parseLectura(text: string): Lectura {
     const m = raw.match(HEADER_RE);
     if (m) {
       const h = m[1].toUpperCase();
-      seccion = h.startsWith("EN UNA")
-        ? "frase"
-        : h.startsWith("ESTADO")
-          ? "frentes"
-          : h.startsWith("SITUACI")
-          ? "situacion"
-          : h.startsWith("QU")
-            ? "cambio"
-            : h.startsWith("RIESGO")
-              ? "riesgos"
-              : "pasos";
+      seccion = seccionDe(h);
       line = m[2];
     }
     const clean = line.replace(BULLET_RE, "").trim();
@@ -60,12 +68,15 @@ function parseLectura(text: string): Lectura {
       if (i > 0 && i < 48) frentes.push({ name: clean.slice(0, i).trim(), text: clean.slice(i + 1).trim() });
       else if (frentes.length) frentes[frentes.length - 1].text += ` ${clean}`;
     }
+    else if (seccion === "proyeccion") proyeccion.push(clean);
+    else if (seccion === "cumplimiento") cumplimiento.push(clean);
+    else if (seccion === "alertas") alertas.push(clean);
     else if (seccion === "cambio") cambio.push(clean);
     else if (seccion === "riesgos") riesgos.push(clean);
     else if (seccion === "pasos") pasos.push(clean);
     else situacion.push(clean);
   }
-  return { frase, frentes, situacion: situacion.join(" "), cambio: cambio.join(" "), riesgos, pasos };
+  return { frase, frentes, situacion: situacion.join(" "), cambio: cambio.join(" "), riesgos, pasos, proyeccion, cumplimiento, alertas };
 }
 
 function haceCuanto(iso: string): string {
@@ -144,6 +155,19 @@ export function LecturaEstado({
       </div>
 
 
+      {!editando && filas.length === 0 ? (
+        <div style={{ marginBottom: 12 }}>
+          <button
+            className="text-action as-edit"
+            onClick={() => {
+              setBorrador("");
+              setEditando(true);
+            }}
+          >
+            <Pencil size={12} aria-hidden="true" /> Definir frentes del tema (opcional)
+          </button>
+        </div>
+      ) : (
       <div className="frentes">
         <div className="frentes-head">
           <span className="frentes-lbl">Estado por frente</span>
@@ -193,6 +217,7 @@ export function LecturaEstado({
             </div>
           ))}
       </div>
+      )}
 
       {loading && (
         <div className="ai-loading" style={{ display: "block", marginBottom: 14 }}>
@@ -213,6 +238,52 @@ export function LecturaEstado({
           {l.frase && (
             <div className="lect-frase" style={{ borderLeftColor: color }}>
               {l.frase}
+            </div>
+          )}
+          {(l.proyeccion.length > 0 || l.cumplimiento.length > 0 || l.alertas.length > 0) && (
+            <div className="lect-stack">
+              {l.proyeccion.length > 0 && (
+                <div className="lect-col pasos">
+                  <div className="lect-col-head">
+                    <TrendingUp size={15} aria-hidden="true" />
+                    Proyección de liberación semanal
+                  </div>
+                  {l.proyeccion.map((t, i) => (
+                    <div className="lect-item" key={i}>
+                      <span className="lect-num">{i + 1}</span>
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {l.cumplimiento.length > 0 && (
+                <div className="lect-col pasos">
+                  <div className="lect-col-head">
+                    <Target size={15} aria-hidden="true" />
+                    Cuánto se cumplió realmente
+                  </div>
+                  {l.cumplimiento.map((t, i) => (
+                    <div className="lect-item" key={i}>
+                      <span className="lect-num">{i + 1}</span>
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {l.alertas.length > 0 && (
+                <div className="lect-col riesgos">
+                  <div className="lect-col-head">
+                    <TriangleAlert size={15} aria-hidden="true" />
+                    Alertas y temas críticos
+                  </div>
+                  {l.alertas.map((t, i) => (
+                    <div className="lect-item" key={i}>
+                      <span className="lect-num">{i + 1}</span>
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {l.situacion && <p className="lect-situacion">{l.situacion}</p>}

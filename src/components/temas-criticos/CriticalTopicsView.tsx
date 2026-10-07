@@ -8,6 +8,7 @@ import {
   criticalTopicFileExtractionSystemPrompt,
   criticalTopicReportExtractionSystemPrompt,
   criticalTopicStatusSystemPrompt,
+  habilitacionPmoStatusSystemPrompt,
   criticalTopicTasksSystemPrompt,
 } from "@/lib/prompts";
 import { appendProfile, buildCriticalTopicContext } from "@/lib/context";
@@ -178,7 +179,8 @@ export default function CriticalTopicsView({
     setStatusLoading(true);
     try {
       const user = buildCriticalTopicContext(t.title, allEntries, t.status_summary, t.frentes) + appendProfile("", profile);
-      const raw = await askClaude(criticalTopicStatusSystemPrompt(), user, 1800);
+      const sistema = /pmo/i.test(t.title) ? habilitacionPmoStatusSystemPrompt() : criticalTopicStatusSystemPrompt();
+      const raw = await askClaude(sistema, user, 2000);
       const { data } = await supabase
         .from("critical_topics")
         .update({ status_summary: raw.trim(), status_updated_at: new Date().toISOString() })
@@ -307,7 +309,7 @@ export default function CriticalTopicsView({
 
       if (reporte.length) {
         const crudo = reporte.join("\n\n").slice(0, 60000) + (text ? `\n\nNota de quien lo adjunta: ${text}` : "");
-        const extraido = await askClaude(criticalTopicReportExtractionSystemPrompt(), crudo, 2500, "low");
+        const extraido = await askClaude(criticalTopicReportExtractionSystemPrompt(/pmo/i.test(topic.title)), crudo, 3500, "low");
         bloques.push(`[Reporte extraído de ${files.map((f) => f.name).join(", ")}]\n${extraido.trim()}`);
       }
       for (const b of binarios) {

@@ -81,7 +81,10 @@ function hojaATexto(nombre: string, filas: unknown[][]): string {
 
 async function leerXlsx(nombre: string, datos: File | Blob): Promise<string> {
   const { default: readExcelFile } = await import("read-excel-file/universal");
-  const hojas = (await readExcelFile(datos)) as { sheet: string; data: unknown[][] }[];
+  const todas = (await readExcelFile(datos)) as { sheet: string; data: unknown[][] }[];
+  // las hojas de conteo o resumen primero: si el archivo es grande, lo recortado son las demás
+  const prioridad = (n: string) => (/conteo|resumen|mes|semana|proyecci/i.test(n) ? 0 : 1);
+  const hojas = [...todas].sort((a, b) => prioridad(a.sheet) - prioridad(b.sheet));
   const partes = hojas.slice(0, MAX_HOJAS).map((h) => hojaATexto(h.sheet, h.data));
   const extra = hojas.length > MAX_HOJAS ? `\n[…${hojas.length - MAX_HOJAS} hojas más no se leyeron]` : "";
   return `[Planilla ${nombre}]\n${partes.join("\n\n")}${extra}`;

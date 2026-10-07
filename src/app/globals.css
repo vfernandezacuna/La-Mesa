@@ -721,6 +721,7 @@ button.as-edit{font-size:0.74rem;padding:0 4px;display:inline-flex;align-items:c
 /* CNX Tracker — lectura de estado */
 .lect-frase{font-family:var(--font-display);font-size:1.22rem;font-weight:600;line-height:1.35;border-left:3px solid var(--ink);padding:2px 0 2px 14px;margin-bottom:14px;}
 .lect-situacion{font-size:0.98rem;line-height:1.65;margin:0 0 18px;max-width:72ch;}
+.lect-stack{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;}
 .lect-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .lect-col{background:var(--paper);border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;}
 .lect-col-head{display:flex;align-items:center;gap:7px;font-size:0.68rem;text-transform:uppercase;letter-spacing:1.3px;font-weight:700;margin-bottom:10px;}
