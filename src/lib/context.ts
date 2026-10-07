@@ -2,7 +2,6 @@ import { daysUntil, todayStr, thisWeekKey } from "./date";
 import { catLabel } from "./tasks";
 import { habitStreak } from "./habits";
 import { PROFILE_DEFAULT } from "./profile-default";
-import { CRITICIDAD } from "./criticidad";
 import type {
   Checkin,
   CriticalTopicEntry,
@@ -460,21 +459,16 @@ export function buildCriticalTopicContext(
   return `Tema: ${title}${asuntos}${antes}\n\n--- HISTORIAL RECIENTE (orden cronológico) ---\n${lines.join("\n\n")}\n--- FIN DEL HISTORIAL ---`;
 }
 
-// Evaluación actual de los asuntos de un tema. Con ids cuando la IA tiene que
-// devolver cambios referenciándolos; sin ids para la lectura de estado.
+// Asuntos de un tema con su ficha (verdad base) y su resumen anterior. Con ids
+// cuando la IA tiene que devolver resúmenes referenciándolos.
 export function buildCriticalTopicItemsContext(items: CriticalTopicItem[], withIds: boolean): string {
   const lines = items.map((it) => {
     const parts: string[] = [];
     if (withIds) parts.push(`id=${it.id}`);
     parts.push(it.descripcion ? `${it.name} (${it.descripcion})` : it.name);
-    parts.push(it.criticidad ? `criticidad ${it.criticidad} (${CRITICIDAD[it.criticidad].label.toLowerCase()})` : "sin evaluar");
-    if (it.avance != null) parts.push(`avance ${it.avance}%`);
-    if (it.tendencia) parts.push(`tendencia ${it.tendencia}`);
-    if (it.estado) parts.push(`estado: ${it.estado}`);
-    if (it.proximo_hito) {
-      parts.push(`próximo hito: ${it.proximo_hito}${it.proximo_hito_fecha ? ` (${it.proximo_hito_fecha})` : ""}`);
-    }
+    if (it.ficha) parts.push(`FICHA: ${it.ficha}`);
+    if (it.resumen) parts.push(`resumen anterior: ${it.resumen}`);
     return `• ${parts.join(" · ")}`;
   });
-  return `--- ASUNTOS DEL TEMA (evaluación actual) ---\n${lines.join("\n")}\n--- FIN DE ASUNTOS ---`;
+  return `--- ASUNTOS DEL TEMA (la ficha es la verdad base) ---\n${lines.join("\n")}\n--- FIN DE ASUNTOS ---`;
 }

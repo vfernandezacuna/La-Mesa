@@ -6,13 +6,14 @@ import { fechaCorta } from "@/lib/date";
 interface Lectura {
   frase: string | null;
   situacion: string;
+  cambio: string;
   riesgos: string[];
   pasos: string[];
 }
 
-type Seccion = "frase" | "situacion" | "riesgos" | "pasos";
+type Seccion = "frase" | "situacion" | "cambio" | "riesgos" | "pasos";
 
-const HEADER_RE = /^\s*(EN UNA FRASE|SITUACI[ÓO]N ACTUAL|RIESGOS(?: Y PENDIENTES)?|PR[ÓO]XIMOS PASOS)\s*:\s*(.*)$/i;
+const HEADER_RE = /^\s*(EN UNA FRASE|SITUACI[ÓO]N ACTUAL|QU[ÉE] CAMBI[ÓO]|RIESGOS(?: Y PENDIENTES)?|PR[ÓO]XIMOS PASOS)\s*:\s*(.*)$/i;
 const BULLET_RE = /^\s*(?:[•\-–*]|\d+[.)])\s*/;
 
 // Acepta el formato nuevo (EN UNA FRASE / prosa) y el anterior (bullets con
@@ -20,6 +21,7 @@ const BULLET_RE = /^\s*(?:[•\-–*]|\d+[.)])\s*/;
 function parseLectura(text: string): Lectura {
   let frase: string | null = null;
   const situacion: string[] = [];
+  const cambio: string[] = [];
   const riesgos: string[] = [];
   const pasos: string[] = [];
   let seccion: Seccion | null = null;
@@ -33,19 +35,22 @@ function parseLectura(text: string): Lectura {
         ? "frase"
         : h.startsWith("SITUACI")
           ? "situacion"
-          : h.startsWith("RIESGO")
-            ? "riesgos"
-            : "pasos";
+          : h.startsWith("QU")
+            ? "cambio"
+            : h.startsWith("RIESGO")
+              ? "riesgos"
+              : "pasos";
       line = m[2];
     }
     const clean = line.replace(BULLET_RE, "").trim();
     if (!clean) continue;
     if (seccion === "frase") frase = frase ? `${frase} ${clean}` : clean;
+    else if (seccion === "cambio") cambio.push(clean);
     else if (seccion === "riesgos") riesgos.push(clean);
     else if (seccion === "pasos") pasos.push(clean);
     else situacion.push(clean);
   }
-  return { frase, situacion: situacion.join(" "), riesgos, pasos };
+  return { frase, situacion: situacion.join(" "), cambio: cambio.join(" "), riesgos, pasos };
 }
 
 function haceCuanto(iso: string): string {
@@ -113,6 +118,11 @@ export function LecturaEstado({
             </div>
           )}
           {l.situacion && <p className="lect-situacion">{l.situacion}</p>}
+          {l.cambio && (
+            <div className="as-cambio" style={{ marginBottom: 14 }}>
+              <span className="as-cambio-lbl">Qué cambió</span> {l.cambio}
+            </div>
+          )}
           {(l.riesgos.length > 0 || l.pasos.length > 0) && (
             <div className="lect-cols">
               {l.riesgos.length > 0 && (

@@ -198,8 +198,21 @@ export interface CriticalTopicItem {
   estado: string | null;
   proximo_hito: string | null;
   proximo_hito_fecha: string | null;
+  ficha: string | null;
+  resumen: string | null;
+  resumen_updated_at: string | null;
   sort_order: number;
   updated_at: string | null;
+  created_at: string;
+}
+
+export interface CriticalTopicItemSummary {
+  id: string;
+  item_id: string;
+  user_id: string;
+  resumen: string;
+  cambio: string | null;
+  source_entry_id: string | null;
   created_at: string;
 }
 
