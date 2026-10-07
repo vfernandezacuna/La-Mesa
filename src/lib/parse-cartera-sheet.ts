@@ -84,18 +84,64 @@ function findFecha(rows: string[][]): string | null {
   return null;
 }
 
+// Algunas planillas (Futalemu) ponen un bloque por año, uno al lado del otro.
+// En ese caso se lee solo el más reciente: el que lleva la fecha más nueva.
+// El bloque parte una columna antes de la fecha (la columna de las etiquetas)
+// y mide 4 columnas (etiqueta, valor, valor extra, cuadro de rentabilidad).
+const BLOQUE_ANCHO = 4;
+
+function latestBlock(rows: string[][]): string[][] {
+  let capitales = 0;
+  let mejor: { fecha: string; col: number } | null = null;
+  for (const row of rows) {
+    row.forEach((raw, c) => {
+      const v = (raw ?? "").trim();
+      if (v === "Capital") capitales++;
+      const d = parseCLDate(v);
+      if (d && (!mejor || d > mejor.fecha)) mejor = { fecha: d, col: c };
+    });
+  }
+  if (capitales <= 1 || !mejor) return rows;
+  const start = Math.max(0, (mejor as { fecha: string; col: number }).col - 1);
+  return rows.map((row) => row.slice(start, start + BLOQUE_ANCHO));
+}
+
+// "Rentabilidad Portafolio" trae la del año y, si hay, la acumulada al lado:
+// se usa la acumulada (segundo valor) cuando existe, si no el único valor.
+function findRentAcum(rows: string[][]): number | null {
+  for (let r = 0; r < rows.length; r++) {
+    for (let c = 0; c < rows[r].length; c++) {
+      if (cell(rows, r, c) !== "Rentabilidad Portafolio") continue;
+      const vals: string[] = [];
+      for (let c2 = c + 1; c2 < rows[r].length; c2++) {
+        const val = cell(rows, r, c2);
+        if (val) vals.push(val);
+      }
+      if (vals.length) return parseCLNumber(vals[1] ?? vals[0]);
+    }
+  }
+  return null;
+}
+
+// La primera columna puede llamarse "Acción" o "Empresa".
+const PRIMERA_COLUMNA = ["acción", "accion", "empresa"];
+
 function findTableStart(rows: string[][], headers: string[]): { row: number; col: number } | null {
   for (let r = 0; r < rows.length; r++) {
     const row = rows[r];
     for (let c = 0; c < row.length; c++) {
-      const matches = headers.every((h, i) => cell(rows, r, c + i).toLowerCase() === h.toLowerCase());
+      const matches = headers.every((h, i) => {
+        const v = cell(rows, r, c + i).toLowerCase();
+        return i === 0 && PRIMERA_COLUMNA.includes(h.toLowerCase()) ? PRIMERA_COLUMNA.includes(v) : v === h.toLowerCase();
+      });
       if (matches) return { row: r, col: c };
     }
   }
   return null;
 }
 
-export function parseCarteraSheet(rows: string[][]): ParsedCarteraSnapshot {
+export function parseCarteraSheet(todas: string[][]): ParsedCarteraSnapshot {
+  const rows = latestBlock(todas);
   const fecha = findFecha(rows);
   if (!fecha) {
     throw new Error("No se encontró una fecha (formato dd/mm/aaaa) en la hoja.");
@@ -105,7 +151,7 @@ export function parseCarteraSheet(rows: string[][]): ParsedCarteraSnapshot {
   const caja = findScalar(rows, "Caja");
   const invertido = findScalar(rows, "(Capital", false);
   const valor_mercado = findScalar(rows, "Valor Mercado Portafolio");
-  const rent_acum = findScalar(rows, "Rentabilidad Portafolio");
+  const rent_acum = findRentAcum(rows);
   const rent_anio = findRentAnio(rows);
 
   if (capital == null || caja == null || invertido == null || valor_mercado == null || rent_acum == null || rent_anio == null) {
@@ -138,6 +184,8 @@ export function parseCarteraSheet(rows: string[][]): ParsedCarteraSnapshot {
     if (!ticker || ticker === "-" || ticker.toUpperCase() === "TOTAL") break;
     const base = inversionPorTicker.get(ticker);
     if (!base) continue;
+    // Posición ya vendida (cantidad 0 y sin valor): no se muestra.
+    if (base.valor_mercado === 0 && parseCLNumber(cell(rows, r, t2.col + 1)) === 0) continue;
     positions.push({
       ticker,
       invertido: base.invertido,
