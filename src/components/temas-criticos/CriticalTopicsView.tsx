@@ -13,11 +13,13 @@ import {
 } from "@/lib/prompts";
 import { appendProfile, buildCriticalTopicContext } from "@/lib/context";
 import { fechaCorta, ymd } from "@/lib/date";
+import { guardarHoja } from "@/lib/hoja-store";
 import {
   EXTENSIONES_CORREO,
   EXTENSIONES_PLANILLA,
   leerArchivoDeReporte,
   type AdjuntoBinario,
+  type HojaPorGuardar,
 } from "@/lib/material-files";
 import type { CriticalTopic, CriticalTopicEntry, CriticalTopicTaskProposal, TaskPriority } from "@/lib/types";
 import { LecturaEstado } from "./LecturaEstado";
@@ -303,16 +305,21 @@ export default function CriticalTopicsView({
       const avisos: string[] = [];
       const notas: string[] = [];
       let planillasLeidas = 0;
+      const hojasPorGuardar: HojaPorGuardar[] = [];
       const binarios: AdjuntoBinario[] = [];
 
       for (const f of files) {
         if (EXTENSIONES_CORREO.test(f.name) || EXTENSIONES_PLANILLA.test(f.name)) {
           // correo (con su Excel adjunto, si trae) o planilla suelta
-          const leido = await leerArchivoDeReporte(f);
+          const leido = await leerArchivoDeReporte(f, {
+            topicId: topic.id,
+            entradasVigentes: new Set(entries.map((x) => x.id)),
+          });
           reporte.push(...leido.textos);
           avisos.push(...(leido.avisos ?? []));
           notas.push(...leido.notas);
           planillasLeidas += leido.planillasLeidas;
+          hojasPorGuardar.push(...leido.hojas);
           binarios.push(...leido.binarios);
         } else if (isTextFile(f)) {
           bloques.push(await f.text());
@@ -323,7 +330,7 @@ export default function CriticalTopicsView({
       }
 
       if (reporte.length) {
-        const crudo = reporte.join("\n\n").slice(0, 60000) + (text ? `\n\nNota de quien lo adjunta: ${text}` : "");
+        const crudo = reporte.join("\n\n").slice(0, 130000) + (text ? `\n\nNota de quien lo adjunta: ${text}` : "");
         const extraido = await askClaude(criticalTopicReportExtractionSystemPrompt(/pmo/i.test(topic.title)), crudo, 3500, "low");
         bloques.push(`[Reporte extraído de ${files.map((f) => f.name).join(", ")}]\n${extraido.trim()}`);
       }
@@ -349,7 +356,11 @@ export default function CriticalTopicsView({
         .single();
       const newEntry = entryData as CriticalTopicEntry | null;
       const allEntries = newEntry ? [...entries, newEntry] : entries;
-      if (newEntry) setEntries(allEntries);
+      if (newEntry) {
+        setEntries(allEntries);
+        // las hojas largas quedan guardadas para leer solo lo nuevo la próxima vez
+        for (const h of hojasPorGuardar) await guardarHoja(h.clave, { ...h.hoja, entryId: newEntry.id });
+      }
       setNoteText("");
       setArchivos([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
