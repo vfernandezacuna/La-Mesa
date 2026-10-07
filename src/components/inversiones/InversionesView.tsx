@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { askClaude, askClaudeWeb, obtenerIndicadores } from "@/lib/claude-client";
 import {
@@ -241,7 +242,14 @@ function PortfolioBlock({
             </div>
           )}
         </div>
-        <button className="text-action" onClick={() => void actualizarDesdeSheet()} disabled={syncLoading}>
+        <button
+          className="ghost btn-icon btn-sm"
+          onClick={() => void actualizarDesdeSheet()}
+          disabled={syncLoading}
+          title="Traer la última versión de la planilla de Google Sheets"
+          style={{ flexShrink: 0 }}
+        >
+          <RefreshCw size={14} aria-hidden="true" className={syncLoading ? "spin" : undefined} />
           {syncLoading ? "Actualizando…" : "Actualizar"}
         </button>
       </div>
