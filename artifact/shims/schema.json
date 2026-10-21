@@ -1,0 +1,270 @@
+{
+ "profile": [
+  "id",
+  "user_id",
+  "content",
+  "updated_at"
+ ],
+ "tasks": [
+  "id",
+  "user_id",
+  "title",
+  "category",
+  "due_date",
+  "due_time",
+  "is_meeting",
+  "is_deadline",
+  "priority",
+  "is_focus",
+  "done",
+  "created_on",
+  "completed_at",
+  "from_weekly",
+  "week_key",
+  "created_at"
+ ],
+ "weekly_reviews": [
+  "id",
+  "user_id",
+  "week_key",
+  "rango",
+  "review_date",
+  "note",
+  "done_count",
+  "pend_count",
+  "late_count",
+  "coach_conclusion",
+  "coach_semana",
+  "coach_accion",
+  "created_at"
+ ],
+ "checkins": [
+  "id",
+  "user_id",
+  "mood",
+  "note",
+  "created_at"
+ ],
+ "weight_log": [
+  "id",
+  "user_id",
+  "recorded_on",
+  "kg",
+  "created_at"
+ ],
+ "exam_results": [
+  "id",
+  "user_id",
+  "taken_on",
+  "test_name",
+  "value",
+  "created_at"
+ ],
+ "health_verdicts": [
+  "id",
+  "user_id",
+  "verdict_text",
+  "signature",
+  "created_at"
+ ],
+ "habits": [
+  "id",
+  "user_id",
+  "code",
+  "name",
+  "cadence",
+  "weekly_target",
+  "created_at"
+ ],
+ "habit_logs": [
+  "id",
+  "habit_id",
+  "user_id",
+  "occurred_on",
+  "meta",
+  "created_at"
+ ],
+ "council_sessions": [
+  "id",
+  "user_id",
+  "dilema",
+  "response_json",
+  "created_at"
+ ],
+ "learning_log": [
+  "id",
+  "user_id",
+  "topic",
+  "response_text",
+  "created_at"
+ ],
+ "market_briefings": [
+  "id",
+  "user_id",
+  "kind",
+  "input_text",
+  "output_text",
+  "output_html",
+  "created_at"
+ ],
+ "market_indicators_cache": [
+  "user_id",
+  "as_of",
+  "uf",
+  "dolar",
+  "fetched_at"
+ ],
+ "patrimonio_classes": [
+  "code",
+  "label",
+  "sub",
+  "side"
+ ],
+ "patrimonio_quarters": [
+  "id",
+  "user_id",
+  "year",
+  "quarter",
+  "created_at"
+ ],
+ "patrimonio_class_totals": [
+  "quarter_id",
+  "class_code",
+  "amount"
+ ],
+ "patrimonio_line_items": [
+  "id",
+  "quarter_id",
+  "class_code",
+  "label",
+  "amount"
+ ],
+ "investments_futalemu": [
+  "id",
+  "user_id",
+  "fecha",
+  "capital",
+  "caja",
+  "invertido",
+  "valor_mercado",
+  "rent_anio",
+  "rent_acum",
+  "created_at"
+ ],
+ "investments_futalemu_positions": [
+  "id",
+  "snapshot_id",
+  "ticker",
+  "invertido",
+  "valor_mercado",
+  "cantidad",
+  "precio_costo",
+  "precio_mercado"
+ ],
+ "critical_topics": [
+  "id",
+  "user_id",
+  "title",
+  "status_summary",
+  "status_updated_at",
+  "archived",
+  "created_at",
+  "frentes"
+ ],
+ "critical_topic_entries": [
+  "id",
+  "topic_id",
+  "user_id",
+  "kind",
+  "content_text",
+  "file_name",
+  "created_at",
+  "report"
+ ],
+ "investment_accounts": [
+  "id",
+  "user_id",
+  "name",
+  "descripcion",
+  "fecha",
+  "capital",
+  "caja",
+  "invertido",
+  "valor_mercado",
+  "rent_anio",
+  "rent_acum",
+  "created_at"
+ ],
+ "investment_account_positions": [
+  "id",
+  "account_id",
+  "ticker",
+  "invertido",
+  "valor_mercado",
+  "cantidad",
+  "precio_costo",
+  "precio_mercado"
+ ],
+ "portfolio_sources": [
+  "id",
+  "user_id",
+  "portfolio_key",
+  "spreadsheet_id",
+  "gid",
+  "last_synced_at",
+  "created_at"
+ ],
+ "critical_topic_items": [
+  "id",
+  "topic_id",
+  "user_id",
+  "name",
+  "descripcion",
+  "criticidad",
+  "avance",
+  "tendencia",
+  "estado",
+  "proximo_hito",
+  "proximo_hito_fecha",
+  "sort_order",
+  "updated_at",
+  "created_at"
+ ],
+ "critical_topic_item_snapshots": [
+  "id",
+  "item_id",
+  "user_id",
+  "criticidad",
+  "avance",
+  "tendencia",
+  "estado",
+  "source_entry_id",
+  "created_at"
+ ],
+ "critical_topic_task_proposals": [
+  "id",
+  "topic_id",
+  "user_id",
+  "title",
+  "due_date",
+  "priority",
+  "is_deadline",
+  "status",
+  "task_id",
+  "source_entry_id",
+  "created_at"
+ ],
+ "investment_account_snapshots": [
+  "id",
+  "account_id",
+  "user_id",
+  "fecha",
+  "capital",
+  "caja",
+  "invertido",
+  "valor_mercado",
+  "rent_anio",
+  "rent_acum",
+  "created_at"
+ ]
+}
