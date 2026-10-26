@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Sun, Calendar, RotateCcw, Compass, Scale, Landmark, LineChart, Briefcase, Database, type LucideIcon } from "lucide-react";
+import { Sun, Calendar, RotateCcw, Compass, Scale, Landmark, LineChart, Database, type LucideIcon } from "lucide-react";
 import Link from "./next-link";
 import { usePathname } from "./next-navigation";
 import { IndicadoresBox } from "./IndicadoresBox";
@@ -8,7 +8,6 @@ import { leerTabla } from "./supabase";
 const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/", icon: Sun, label: "Hoy" },
   { href: "/calendario", icon: Calendar, label: "Calendario" },
-  { href: "/temas-criticos", icon: Briefcase, label: "CNX Tracker" },
   { href: "/revision", icon: RotateCcw, label: "Revisión" },
   { href: "/coach", icon: Compass, label: "Coach" },
   { href: "/consejo", icon: Scale, label: "El Consejo" },
@@ -20,7 +19,6 @@ const NAV_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
 const MOBILE_LABELS: Record<string, string> = {
   "/calendario": "Mes",
   "/patrimonio": "Patrim.",
-  "/temas-criticos": "CNX",
 };
 
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -31,8 +29,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     let vivo = true;
     void (async () => {
       try {
-        const [t, c] = await Promise.all([leerTabla("tasks"), leerTabla("critical_topics")]);
-        if (vivo) setVacio(t.length === 0 && c.length === 0);
+        const [t, h] = await Promise.all([leerTabla("tasks"), leerTabla("habits")]);
+        if (vivo) setVacio(t.length === 0 && h.length === 0);
       } catch {
         // sin datos guardados todavía
       }

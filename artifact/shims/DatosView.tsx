@@ -12,8 +12,7 @@ const TABLAS = [
   "health_verdicts", "council_sessions", "learning_log", "market_briefings", "market_indicators_cache",
   "patrimonio_classes", "patrimonio_quarters", "patrimonio_class_totals", "patrimonio_line_items",
   "investments_futalemu", "investments_futalemu_positions", "investment_accounts", "investment_account_positions",
-  "investment_account_snapshots", "portfolio_sources", "critical_topics", "critical_topic_entries",
-  "critical_topic_task_proposals",
+  "investment_account_snapshots", "portfolio_sources",
 ];
 
 const sqlDe = (tablas: string[]) =>

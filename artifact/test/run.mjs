@@ -49,14 +49,6 @@ await p.click("#capture-btn");
 await p.waitForTimeout(1200);
 console.log("tras captura:", await p.locator(".task-row").count(), "| estado:", await p.textContent(".capture-hint"));
 
-// CNX Tracker
-await p.click("text=CNX Tracker >> nth=0");
-await p.waitForSelector("text=Lectura de estado", { timeout: 15000 });
-await p.screenshot({ path: "/tmp/claude-0/t-cnx.png", fullPage: true });
-await p.fill("textarea", "Se firmó el acta con GTA");
-await p.click("button:has-text('Agregar')");
-await p.waitForTimeout(2500);
-console.log("lectura:", (await p.locator(".lect-frase").allTextContents()).join(" | "));
 for (const tab of ["Calendario", "Revisión", "Coach", "El Consejo", "Patrimonio", "Inversiones"]) {
   await p.click(`text=${tab} >> nth=0`);
   await p.waitForTimeout(1200);

@@ -13,7 +13,6 @@ import ConsejoPage from "../src/app/(app)/consejo/page";
 import InversionesPage from "../src/app/(app)/inversiones/page";
 import PatrimonioPage from "../src/app/(app)/patrimonio/page";
 import RevisionPage from "../src/app/(app)/revision/page";
-import TemasCriticosPage from "../src/app/(app)/temas-criticos/page";
 
 type PageFn = (props: any) => Promise<ReactNode> | ReactNode;
 
@@ -25,7 +24,6 @@ const RUTAS: Record<string, PageFn> = {
   "/inversiones": InversionesPage as PageFn,
   "/patrimonio": PatrimonioPage as PageFn,
   "/revision": RevisionPage as PageFn,
-  "/temas-criticos": TemasCriticosPage as PageFn,
 };
 
 class Limite extends Component<{ children: ReactNode; clave: string }, { error: string | null }> {
