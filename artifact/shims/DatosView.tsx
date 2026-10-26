@@ -16,16 +16,16 @@ const TABLAS = [
   "critical_topic_task_proposals",
 ];
 
-export const SQL_EXPORT = TABLAS.map(
-  (t, i) => `${i ? "union all " : ""}select '${t}' as t, coalesce(json_agg(x), '[]'::json) as d from ${t} x`,
-).join("\n") + ";";
+const sqlDe = (tablas: string[]) =>
+  tablas.map((t, i) => `${i ? "union all " : ""}select '${t}' as t, coalesce(json_agg(x), '[]'::json) as d from ${t} x`).join("\n") + ";";
+export const SQL_EXPORT = sqlDe(TABLAS);
 
 type Fila = Record<string, any>;
 
-function extraer(texto: string, nombre: string): Record<string, Fila[]> {
+function extraer(texto: string, nombre: string, permitidas: string[]): Record<string, Fila[]> {
   const out: Record<string, Fila[]> = {};
   const poner = (t: string, filas: unknown) => {
-    if (TABLAS.includes(t) && Array.isArray(filas)) out[t] = [...(out[t] ?? []), ...(filas as Fila[])];
+    if (permitidas.includes(t) && Array.isArray(filas)) out[t] = [...(out[t] ?? []), ...(filas as Fila[])];
   };
   if (/\.json$/i.test(nombre) || texto.trim().startsWith("{") || texto.trim().startsWith("[")) {
     const j = JSON.parse(texto);
@@ -51,7 +51,8 @@ async function conReintento<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export default function DatosView() {
+export default function DatosView({ tablas = TABLAS, conIndicadores = true }: { tablas?: string[]; conIndicadores?: boolean }) {
+  const sql = sqlDe(tablas);
   const archivoRef = useRef<HTMLInputElement>(null);
   const [estado, setEstado] = useState<string | null>(null);
   const [progreso, setProgreso] = useState<{ hechas: number; total: number } | null>(null);
@@ -64,14 +65,14 @@ export default function DatosView() {
     setEstado(null);
     setTrabajando(true);
     try {
-      const datos = extraer(await file.text(), file.name);
-      const tablas = Object.keys(datos);
-      const total = tablas.reduce((s, t) => s + datos[t].length, 0);
+      const datos = extraer(await file.text(), file.name, tablas);
+      const traidas = Object.keys(datos);
+      const total = traidas.reduce((s, t) => s + datos[t].length, 0);
       if (!total) throw new Error("No encontré filas de las tablas del panel en ese archivo.");
       if (total > 22000) throw new Error(`El archivo trae ${total} filas; el límite de esta página es ~25.000 documentos.`);
       let hechas = 0;
       setProgreso({ hechas, total });
-      const cola: { t: string; fila: Fila }[] = tablas.flatMap((t) => datos[t].map((fila) => ({ t, fila })));
+      const cola: { t: string; fila: Fila }[] = traidas.flatMap((t) => datos[t].map((fila) => ({ t, fila })));
       const trabajadores = Array.from({ length: 5 }, async () => {
         while (cola.length) {
           const item = cola.shift();
@@ -84,7 +85,7 @@ export default function DatosView() {
         }
       });
       await Promise.all(trabajadores);
-      setEstado(`Listo: traje ${total} filas de ${tablas.length} tablas (${tablas.join(", ")}).`);
+      setEstado(`Listo: traje ${total} filas de ${traidas.length} tablas (${traidas.join(", ")}).`);
       refrescar();
     } catch (e: any) {
       setError(e?.message ?? "No se pudo importar.");
@@ -94,7 +95,7 @@ export default function DatosView() {
 
   async function copiarSql() {
     try {
-      await navigator.clipboard.writeText(SQL_EXPORT);
+      await navigator.clipboard.writeText(sql);
       setCopiado(true);
     } catch {
       setCopiado(false);
@@ -106,7 +107,7 @@ export default function DatosView() {
     setError(null);
     try {
       const out: Record<string, Fila[]> = {};
-      for (const t of TABLAS) out[t] = await leerTabla(t);
+      for (const t of tablas) out[t] = await leerTabla(t);
       const dl = await getDownloads();
       if (!dl) throw new Error("La descarga no está disponible en esta vista.");
       await dl.save({ filename: `la-mesa-respaldo-${new Date().toISOString().slice(0, 10)}.json`, data: JSON.stringify(out) });
@@ -133,7 +134,7 @@ export default function DatosView() {
           <li>En los resultados toca <b>Export → Download CSV</b>.</li>
           <li>Sube aquí ese archivo.</li>
         </ol>
-        <pre style={{ maxHeight: 130, overflow: "auto", background: "var(--surface)", padding: 12, borderRadius: 8, fontSize: "0.7rem", whiteSpace: "pre-wrap" }}>{SQL_EXPORT}</pre>
+        <pre style={{ maxHeight: 130, overflow: "auto", background: "var(--surface)", padding: 12, borderRadius: 8, fontSize: "0.7rem", whiteSpace: "pre-wrap" }}>{sql}</pre>
         <div className="row" style={{ marginTop: 10, gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <button className="ghost" onClick={() => void copiarSql()}>
             {copiado ? "Copiado" : "Copiar SQL"}
@@ -150,13 +151,15 @@ export default function DatosView() {
         )}
       </div>
 
-      <div className="panel">
-        <h2>2. UF y dólar</h2>
-        <IndicadoresBox />
-      </div>
+      {conIndicadores && (
+        <div className="panel">
+          <h2>2. UF y dólar</h2>
+          <IndicadoresBox />
+        </div>
+      )}
 
       <div className="panel">
-        <h2>3. Respaldo</h2>
+        <h2>{conIndicadores ? "3. Respaldo" : "2. Respaldo"}</h2>
         <div className="page-sub" style={{ margin: "-6px 0 10px 0" }}>Descarga todo lo guardado en esta página como un archivo.</div>
         <div className="row" style={{ gap: 10 }}>
           <button className="ghost" onClick={() => void respaldo()}>Descargar respaldo</button>

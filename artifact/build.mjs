@@ -5,6 +5,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const aqui = dirname(fileURLToPath(import.meta.url));
+const variante = process.argv[2] === "cnx" ? "cnx" : "panel";
 const raiz = resolve(aqui, "..");
 const sh = (f) => resolve(aqui, "shims", f);
 
@@ -42,7 +43,7 @@ const plugin = {
 };
 
 const js = await build({
-  entryPoints: [resolve(aqui, "main.tsx")],
+  entryPoints: [resolve(aqui, variante === "cnx" ? "main-cnx.tsx" : "main.tsx")],
   bundle: true,
   write: false,
   format: "iife",
@@ -65,7 +66,7 @@ ${css}
 `;
 
 const codigo = js.outputFiles[0].text.replace(/<\/script/gi, "<\\/script");
-const html = `<title>La Mesa</title>
+const html = `<title>${variante === "cnx" ? "CNX Tracker" : "La Mesa"}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -74,5 +75,6 @@ const html = `<title>La Mesa</title>
 <script>${codigo}</script>
 `;
 mkdirSync(resolve(aqui, "dist"), { recursive: true });
-writeFileSync(resolve(aqui, "dist/index.html"), html);
-console.log("index.html:", (html.length / 1048576).toFixed(2), "MB");
+const salida = variante === "cnx" ? "dist/cnx-tracker.html" : "dist/index.html";
+writeFileSync(resolve(aqui, salida), html);
+console.log(salida + ":", (html.length / 1048576).toFixed(2), "MB");

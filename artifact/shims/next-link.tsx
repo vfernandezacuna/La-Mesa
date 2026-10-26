@@ -5,14 +5,16 @@ type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & { href: str
 
 export default function Link({ href, prefetch: _prefetch, onClick, children, ...rest }: Props) {
   void _prefetch;
+  // En la versión solo-CNX, "Ver en Hoy" lleva a la lista de Tareas.
+  const destino = (window as unknown as { __MODO_CNX?: boolean }).__MODO_CNX && href === "/" && typeof children === "string" && children.startsWith("Ver en") ? "/tareas" : href;
   return (
     <a
-      href={href}
+      href={destino}
       onClick={(e) => {
         onClick?.(e);
         if (e.defaultPrevented) return;
         e.preventDefault();
-        navegar(href);
+        navegar(destino);
       }}
       {...rest}
     >
